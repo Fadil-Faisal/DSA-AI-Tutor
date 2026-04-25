@@ -1,4 +1,4 @@
-// app/api/rooms/route.ts
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 
@@ -80,12 +80,13 @@ export async function POST(req: NextRequest) {
       if (!existing) {
         const { data, error } = await supabaseServer
           .from('rooms')
-          .insert({ room_code: roomCode, mode, status: 'waiting', current_problem_id: null })
+          .insert({ id: randomUUID(), room_code: roomCode, mode, status: 'waiting', current_problem_id: null })
           .select()
           .single();
 
         if (error) {
-          return NextResponse.json({ error: 'Failed to create room' }, { status: 500 });
+          console.error('Room insert error:', error);
+          return NextResponse.json({ error: 'Failed to create room', details: error.message }, { status: 500 });
         }
         room = data as RoomData;
         break;
