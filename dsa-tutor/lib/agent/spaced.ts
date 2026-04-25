@@ -16,7 +16,7 @@ export async function getDueTopics(sessionId: string): Promise<string[]> {
     .eq('session_id', sessionId)
     .gt('created_at', cutoff);
 
-  const recentTopics = new Set(data?.map((r: any) => r.topic));
+  const recentTopics = new Set(data?.map((r: { topic: string }) => r.topic));
   return ALL_TOPICS.filter(t => !recentTopics.has(t));
 }
 
@@ -31,7 +31,7 @@ export async function getTopMistakePattern(sessionId: string): Promise<string | 
   if (!data?.length) return null;
 
   const counts: Record<string, number> = {};
-  data.forEach((r: any) => {
+  data.forEach((r: { mistake_pattern: string | null }) => {
     if (r.mistake_pattern) {
       counts[r.mistake_pattern] = (counts[r.mistake_pattern] ?? 0) + 1;
     }

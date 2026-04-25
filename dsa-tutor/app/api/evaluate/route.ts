@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[/api/evaluate] AI source: ${source}`);
 
-    let result: any;
+    let result: { correct: boolean; feedback: string; mistakePattern: string | null; timeComplexity?: string | null; spaceComplexity?: string | null; recurringPattern?: boolean; recurringPatternMessage?: string };
     try {
       result = JSON.parse(aiRaw);
     } catch {
@@ -141,8 +141,8 @@ export async function POST(req: NextRequest) {
       ai_source: source,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/evaluate] Unhandled error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       Weakest topic: ${weakestTopic}
       Topics due for review (not practiced in 48h): ${JSON.stringify(dueTopics)}
       Last attempt: ${JSON.stringify(lastAttempt ?? null)}
-      Recent topics practiced: ${JSON.stringify(recentAttempts?.map((a: any) => a.topic) ?? [])}
+      Recent topics practiced: ${JSON.stringify(recentAttempts?.map((a: { topic: string }) => a.topic) ?? [])}
 
       Decision rules:
       - Prioritize topics with confidence below 0.4
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[/api/agent] AI source: ${source}`);
 
-    let parsed: any;
+    let parsed: { topic: string; difficulty: string; reasoning: string; decision_type: string };
     try {
       parsed = JSON.parse(aiRaw);
     } catch {
@@ -121,8 +121,8 @@ export async function POST(req: NextRequest) {
       ai_source: source,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/agent] Unhandled error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

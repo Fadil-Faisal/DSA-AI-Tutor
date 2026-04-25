@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'sessionId query param required' }, { status: 400 });
     }
 
-    let { data: profile, error } = await supabaseServer
+    const { data: profile, error } = await supabaseServer
       .from('learner_profiles')
       .select('*')
       .eq('session_id', sessionId)
@@ -26,12 +26,12 @@ export async function GET(req: NextRequest) {
       if (createError) {
         return NextResponse.json({ error: 'Failed to create learner profile' }, { status: 500 });
       }
-      profile = newProfile;
+      return NextResponse.json({ profile: newProfile });
     }
 
     return NextResponse.json({ profile });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[GET /api/learner] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, topic, correct, timeTaken, mistakePattern, explanationMode } = await req.json();
+    const { sessionId, topic, correct, timeTaken, explanationMode } = await req.json();
 
     if (!sessionId || !topic || correct === undefined) {
       return NextResponse.json({ error: 'Missing required fields: sessionId, topic, correct' }, { status: 400 });
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const newStreak = correct ? ((profile?.current_streak ?? 0) + 1) : 0;
     const newTotal = (profile?.total_problems_attempted ?? 0) + 1;
 
-    const updatePayload: any = {
+    const updatePayload: Record<string, unknown> = {
       current_streak: newStreak,
       total_problems_attempted: newTotal,
       updated_at: new Date().toISOString(),
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       totalProblems: newTotal,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[POST /api/learner] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

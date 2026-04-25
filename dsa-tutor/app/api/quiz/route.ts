@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'answers must be 1-10 items' }, { status: 400 });
     }
 
-    const results: any[] = [];
+    const results: Array<{ questionId: string; topic: string; correct: boolean; correctOption: string; initialConfidence: number; explanation: string }> = [];
     const topicScores: Record<string, { total: number; correct: number }> = {};
     let overallScore = 0;
 
@@ -165,11 +165,9 @@ export async function POST(req: NextRequest) {
     for (const result of results) {
       await supabaseServer.from('problem_attempts').insert({
         session_id: sessionId,
-        problem_id: result.questionId,
         topic: result.topic,
         final_status: 'quiz',
-        correct: result.correct,
-        time_taken_ms: 0,
+        mistake_pattern: result.correct ? null : `quiz_wrong:${result.questionId}`,
       });
     }
 
@@ -181,7 +179,7 @@ export async function POST(req: NextRequest) {
       confidenceProfile,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/quiz POST] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

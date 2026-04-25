@@ -29,7 +29,7 @@ export async function updateConfidence(
     .eq('session_id', sessionId)
     .single();
 
-  const currentValue = (data as any)?.[columnName] ?? 0.5;
+  const currentValue = data?.[columnName as keyof typeof data] as number | undefined ?? 0.5;
   const newValue = clampConfidence(currentValue + delta);
 
   await supabaseServer

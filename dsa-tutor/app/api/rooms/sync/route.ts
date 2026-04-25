@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: roomId, sessionId' }, { status: 400 });
     }
 
-    const updateData: any = { updated_at: new Date().toISOString() };
+    const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (currentCode !== undefined) updateData.current_code = currentCode;
     if (cursorPosition !== undefined) updateData.cursor_position = cursorPosition;
     if (status !== undefined) updateData.status = status;
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       members,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/rooms/sync POST] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ question: question.trim(), stage, ai_source: source });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/interview] Error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
