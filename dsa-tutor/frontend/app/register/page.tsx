@@ -1,0 +1,429 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Brain, Mail, Lock, Eye, EyeOff, User, Zap, AlertCircle, ChevronRight, Calendar,
+  BookOpen, GraduationCap,
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase/browser';
+import { useAuth } from '@/hooks/useAuth';
+import { useLearnerStore } from '@/store/learnerStore';
+
+// ── Neural Canvas ──────────────────────────────────────────────────────────
+function NeuralCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let animId: number;
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+    type P = { x: number; y: number; vx: number; vy: number; r: number };
+    const nodes: P[] = Array.from({ length: 40 }, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 2 + 0.8,
+    }));
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 130) {
+            ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.strokeStyle = `rgba(139,92,246,${0.12 * (1 - d / 130)})`; ctx.lineWidth = 1; ctx.stroke();
+          }
+        }
+      }
+      nodes.forEach((n) => {
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(167,139,250,0.5)'; ctx.fill();
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+        if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      });
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={canvasRef} aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.4 }} />;
+}
+
+// ── Input Field ────────────────────────────────────────────────────────────
+function InputField({
+  id, label, type = 'text', value, onChange, placeholder, icon, rightEl, error,
+}: {
+  id: string; label: string; type?: string; value: string;
+  onChange: (v: string) => void; placeholder: string;
+  icon: React.ReactNode; rightEl?: React.ReactNode; error?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label htmlFor={id} style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        {label}
+      </label>
+      <div style={{
+        position: 'relative', display: 'flex', alignItems: 'center',
+        border: `1px solid ${error ? 'rgba(244,63,94,0.5)' : focused ? 'rgba(139,92,246,0.7)' : 'rgba(148,163,184,0.15)'}`,
+        borderRadius: 10, background: focused ? 'rgba(139,92,246,0.05)' : 'rgba(15,23,42,0.7)',
+        boxShadow: focused ? '0 0 0 3px rgba(139,92,246,0.12)' : 'none',
+        transition: 'all 0.2s',
+      }}>
+        <span style={{ position: 'absolute', left: 13, color: error ? '#f43f5e' : focused ? '#a78bfa' : '#475569', display: 'flex', transition: 'color 0.2s' }}>
+          {icon}
+        </span>
+        <input
+          id={id} type={type} value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          autoComplete={type === 'password' ? 'new-password' : type === 'email' ? 'email' : 'on'}
+          style={{
+            flex: 1, padding: '11px 13px 11px 38px', background: 'transparent', border: 'none',
+            outline: 'none', fontSize: 14, color: '#f1f5f9', fontFamily: 'Inter, sans-serif',
+            paddingRight: rightEl ? 40 : 13,
+          }}
+        />
+        {rightEl && (
+          <span style={{ position: 'absolute', right: 13, display: 'flex', cursor: 'pointer', color: '#475569' }}>
+            {rightEl}
+          </span>
+        )}
+      </div>
+      <AnimatePresence>
+        {error && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ fontSize: 11, color: '#f43f5e', display: 'flex', alignItems: 'center', gap: 4, margin: 0 }}>
+            <AlertCircle size={10} /> {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Difficulty Selector ────────────────────────────────────────────────────
+const DIFFICULTIES = [
+  {
+    value: 'beginner',
+    label: 'Beginner',
+    desc: 'New to DSA — start with the basics',
+    icon: <BookOpen size={18} />,
+    color: '#3b82f6',
+  },
+  {
+    value: 'intermediate',
+    label: 'Intermediate',
+    desc: 'Know the basics, ready for harder problems',
+    icon: <GraduationCap size={18} />,
+    color: '#8b5cf6',
+  },
+] as const;
+
+type Difficulty = 'beginner' | 'intermediate';
+
+function DifficultySelector({
+  value, onChange, error,
+}: {
+  value: Difficulty | null; onChange: (v: Difficulty) => void; error?: string;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        Difficulty Level
+      </span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {DIFFICULTIES.map((d) => {
+          const active = value === d.value;
+          return (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => onChange(d.value)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                gap: 4, padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                border: `1.5px solid ${active ? d.color : 'rgba(148,163,184,0.15)'}`,
+                background: active ? `${d.color}12` : 'rgba(15,23,42,0.7)',
+                boxShadow: active ? `0 0 0 3px ${d.color}20` : 'none',
+                transition: 'all 0.18s', textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ color: active ? d.color : '#475569', transition: 'color 0.18s' }}>
+                  {d.icon}
+                </span>
+                <span style={{
+                  fontSize: 13, fontWeight: 700,
+                  color: active ? d.color : '#94a3b8',
+                  transition: 'color 0.18s',
+                }}>
+                  {d.label}
+                </span>
+              </div>
+              <span style={{ fontSize: 11, color: active ? `${d.color}bb` : '#475569', lineHeight: 1.4, transition: 'color 0.18s' }}>
+                {d.desc}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <AnimatePresence>
+        {error && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ fontSize: 11, color: '#f43f5e', display: 'flex', alignItems: 'center', gap: 4, margin: 0 }}>
+            <AlertCircle size={10} /> {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────
+export default function RegisterPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const { setSessionId, setUserName } = useLearnerStore();
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [email, setEmail] = useState('');
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
+  const [password, setPassword] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string; age?: string; email?: string;
+    difficulty?: string; password?: string; confirm?: string; global?: string;
+  }>({});
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) router.push('/');
+  }, [user, authLoading, router]);
+
+  const validate = () => {
+    const e: typeof errors = {};
+    if (!name.trim()) e.name = 'Full name is required';
+    else if (name.trim().length < 2) e.name = 'At least 2 characters';
+    if (!age.trim()) e.age = 'Age is required';
+    else if (isNaN(Number(age)) || Number(age) < 5 || Number(age) > 120) e.age = 'Enter a valid age';
+    if (!email.trim()) e.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Enter a valid email';
+    if (!difficulty) e.difficulty = 'Please select a difficulty';
+    if (!password) e.password = 'Password is required';
+    else if (password.length < 6) e.password = 'Minimum 6 characters';
+    if (!confirmPass) e.confirm = 'Please confirm your password';
+    else if (confirmPass !== password) e.confirm = 'Passwords do not match';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
+    setErrors({});
+    try {
+      const { error, data } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: name.trim(), age: Number(age), difficulty } },
+      });
+      if (error) {
+        setErrors({ global: error.message });
+      } else {
+        if (data.user) {
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ auth_id: data.user.id, full_name: name.trim(), age: Number(age), difficulty }),
+          });
+          if (res.ok) {
+            const { sessionId } = await res.json();
+            if (sessionId) { setSessionId(sessionId); setUserName(name.trim()); }
+          }
+        }
+        setSuccess(true);
+        setTimeout(() => router.push('/'), 1200);
+      }
+    } catch {
+      setErrors({ global: 'Something went wrong. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      height: '100dvh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #030712 0%, #060e1e 50%, #030712 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      <NeuralCanvas />
+
+      <div aria-hidden style={{ position: 'fixed', top: '10%', right: '8%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
+      <div aria-hidden style={{ position: 'fixed', bottom: '10%', left: '6%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45 }}
+        style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 520, padding: '0 20px' }}
+      >
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(10,22,40,0.98) 100%)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid rgba(148,163,184,0.12)',
+          borderRadius: 22,
+          padding: '28px 36px 30px',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
+        }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 22 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 14,
+              background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 12px',
+              boxShadow: '0 0 28px rgba(139,92,246,0.45)',
+            }}>
+              <Brain size={24} color="white" />
+            </div>
+            <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 4, letterSpacing: '-0.02em' }}>
+              Create your account
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748b' }}>Join LlhamLearns and start your DSA journey</p>
+          </div>
+
+          {/* Success */}
+          <AnimatePresence>
+            {success && (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Zap size={14} /> Account created! Redirecting…
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Global error */}
+          <AnimatePresence>
+            {errors.global && (
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', color: '#fb7185', fontSize: 12, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle size={13} style={{ flexShrink: 0 }} /> {errors.global}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Form */}
+          <form onSubmit={handleRegister} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+
+            {/* Name + Age */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 12 }}>
+              <InputField id="reg-name" label="Full Name" value={name} onChange={setName} placeholder="Jane Smith" icon={<User size={15} />} error={errors.name} />
+              <InputField id="reg-age" label="Age" type="number" value={age} onChange={setAge} placeholder="18" icon={<Calendar size={15} />} error={errors.age} />
+            </div>
+
+            {/* Email */}
+            <InputField id="reg-email" label="Email Address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon={<Mail size={15} />} error={errors.email} />
+
+            {/* Difficulty */}
+            <DifficultySelector value={difficulty} onChange={setDifficulty} error={errors.difficulty} />
+
+            {/* Password */}
+            <InputField
+              id="reg-password" label="Password"
+              type={showPass ? 'text' : 'password'}
+              value={password} onChange={setPassword}
+              placeholder="Minimum 6 characters"
+              icon={<Lock size={15} />}
+              error={errors.password}
+              rightEl={
+                <button type="button" onClick={() => setShowPass(!showPass)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#475569', display: 'flex' }}>
+                  {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              }
+            />
+
+            {/* Confirm Password */}
+            <InputField
+              id="reg-confirm" label="Confirm Password"
+              type={showConfirm ? 'text' : 'password'}
+              value={confirmPass} onChange={setConfirmPass}
+              placeholder="Repeat your password"
+              icon={<Lock size={15} />}
+              error={errors.confirm}
+              rightEl={
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#475569', display: 'flex' }}>
+                  {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              }
+            />
+
+            {/* Submit */}
+            <motion.button
+              type="submit"
+              disabled={loading || success}
+              whileHover={{ scale: loading ? 1 : 1.01 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                padding: '13px', borderRadius: 12, border: 'none',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                background: loading || success ? 'rgba(139,92,246,0.4)' : 'linear-gradient(135deg, #7c3aed, #2563eb)',
+                color: 'white', fontSize: 15, fontWeight: 700,
+                boxShadow: loading || success ? 'none' : '0 0 28px rgba(139,92,246,0.35)',
+                transition: 'all 0.2s', marginTop: 2,
+              }}
+            >
+              {loading ? (
+                <>
+                  <span style={{ width: 15, height: 15, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                  Creating account…
+                </>
+              ) : (
+                <><Brain size={16} /> Create Account <ChevronRight size={16} /></>
+              )}
+            </motion.button>
+          </form>
+
+          {/* Footer */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 12px' }}>
+            <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)' }} />
+            <span style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>Already have an account?</span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)' }} />
+          </div>
+
+          <a href="/login" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '11px', borderRadius: 12,
+            border: '1px solid rgba(148,163,184,0.15)',
+            background: 'rgba(255,255,255,0.03)',
+            color: '#94a3b8', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+          }}>
+            Sign in instead
+          </a>
+        </div>
+      </motion.div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}

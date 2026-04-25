@@ -1,0 +1,706 @@
+Adaptive DSA Tutor Agent
+Backend Developer Document
+Prepared for: Fadil Faisal
+AAYAM 2026 · 24-Hour National Hackathon · Track 1: Build an AI Agent
+1. Backend Overview
+The backend for the Adaptive DSA Tutor Agent is built entirely using Next.js 14 API Routes — no separate Express or NestJS server is needed. All routes live under app/api/ and are deployed as serverless functions on Vercel's free tier.
+This document is the complete backend implementation guide for Fadil Faisal. It covers every API route, the AI decision engine, Groq + Gemini integration, the two-stage explanation mode system, the database schema, Supabase Realtime for multiplayer, Judge0 code execution, and security considerations.
+2. Backend Architecture
+No dedicated backend server. All logic runs as Next.js serverless API routes. Supabase handles the database, auth (optional), and Realtime WebSocket channels for multiplayer.
+Request Flow:
+  Browser (React)  →  Next.js API Route  →  Groq / Gemini API
+                            ↓                       ↓
+                     Supabase DB  ←──── AI response processed
+                            ↓
+                    Response to Browser
+Multiplayer Flow:
+  Student A  →  Supabase DB update (room_members.current_code)
+                     ↓
+              Supabase Realtime broadcasts change
+                     ↓
+  Student B  ←  Receives update via WebSocket subscription
+3. AI Client Setup
+3.1 Groq Client (lib/agent/groq.ts)
+Groq is OpenAI API-compatible. Use the openai npm package pointing to Groq's base URL. No separate SDK needed.
+// lib/agent/groq.ts
+import OpenAI from 'openai';
+export const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: 'https://api.groq.com/openai/v1',
+});
+// Fast model — use for evaluate + hints (happens constantly)
+export const GROQ_FAST = 'llama-3.1-8b-instant';
+// Powerful model — use for reasoning panel text
+export const GROQ_STRONG = 'llama-3.3-70b-versatile';
+3.2 Gemini Client (lib/agent/gemini.ts)
+Gemini handles complex multi-paragraph reasoning — next problem decisions, full learner history analysis, and interview feedback.
+// lib/agent/gemini.ts
+import { GoogleGenerativeAI } from '@google/generative-ai';
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+export const gemini = genAI.getGenerativeModel({
+  model: 'gemini-1.5-flash',  // Free tier: 1500 req/day, 15 req/min
+});
+export async function geminiChat(prompt: string): Promise<string> {
+  const result = await gemini.generateContent(prompt);
+  return result.response.text();
+}
+3.3 AI Call Distribution Strategy
+4. The Two-Stage Explanation System (Backend Implementation)
+Every API route that calls an AI model must accept and handle the explanationMode field ('simple' | 'complex'). This mode modifies the AI system prompt to produce age-appropriate output.
+4.1 Persona Prompts
+// lib/agent/prompts.ts
+export function getModePersona(mode: 'simple' | 'complex'): string {
+  if (mode === 'simple') {
+    return `
+      You are explaining to a 10-year-old who is just starting to learn programming.
+      Rules:
+      - Use ZERO technical jargon. Replace every CS term with a real-world analogy.
+      - Arrays = 'a row of numbered boxes'
+      - Recursion = 'a mirror looking at a mirror'
+      - Pointers = 'a sticky note that tells you where something is'
+      - Keep sentences short. Max 2 lines per paragraph.
+      - Always end with an encouraging sentence.
+    `;
+  }
+  return `
+    You are explaining to a 20-year-old CS student preparing for technical interviews.
+    Rules:
+    - Use precise CS terminology: O(n), amortized complexity, in-place, stable sort.
+    - Reference standard algorithms by name (Dijkstra, BFS, Kadane's algorithm).
+    - Discuss time/space complexity tradeoffs.
+    - Mention edge cases and corner cases explicitly.
+    - Assume knowledge of basic data structures.
+  `;
+}
+4.2 How Mode Affects Each Route
+5. API Routes — Complete Reference
+5.1 POST /api/agent — Core Decision Engine
+The most important route. Decides what problem to give the student next, generates the reasoning panel text. Uses Gemini for deep reasoning.
+Request Body
+{
+  sessionId: string,
+  explanationMode: 'simple' | 'complex',
+  confidence: {
+    arrays: number, trees: number, graphs: number,
+    dp: number, recursion: number, sorting: number,
+    searching: number, strings: number, heaps: number, linked_lists: number
+  },
+  lastAttempt?: {
+    problemId: string,
+    topic: string,
+    correct: boolean,
+    timeTaken: number,
+    mistakePattern?: string
+  }
+}
+Response
+{
+  problem: Problem,          // Next problem to show
+  reasoning: string,         // Plain English: why this problem was chosen
+  decision_type: string,     // 'next_problem' | 'review' | 'new_topic'
+  confidence_update?: { topic: string, delta: number }
+}
+Implementation
+// app/api/agent/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { geminiChat } from '@/lib/agent/gemini';
+import { getModePersona } from '@/lib/agent/prompts';
+import { supabaseServer } from '@/lib/supabase/server';
+export async function POST(req: NextRequest) {
+  const { sessionId, explanationMode, confidence, lastAttempt } = await req.json();
+  // 1. Find weakest topic
+  const weakestTopic = Object.entries(confidence)
+    .sort(([, a], [, b]) => a - b)[0][0];
+  // 2. Check spaced repetition — topics not seen in 48 hours
+  const { data: recentAttempts } = await supabaseServer
+    .from('problem_attempts')
+    .select('topic, created_at')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  // 3. Build Gemini prompt with full context
+  const persona = getModePersona(explanationMode);
+  const prompt = `
+    ${persona}
+    You are an AI tutor deciding what DSA problem to give a student next.
+    Student confidence scores: ${JSON.stringify(confidence)}
+    Weakest topic: ${weakestTopic}
+    Last attempt: ${JSON.stringify(lastAttempt)}
+    Recent topics: ${JSON.stringify(recentAttempts?.map(a => a.topic))}
+    Decide: which topic and difficulty to give next.
+    Explain your reasoning in 2-3 sentences (for the reasoning panel).
+    Respond in JSON: { topic, difficulty, reasoning, decision_type }
+  `;
+  const aiResponse = await geminiChat(prompt);
+  const parsed = JSON.parse(aiResponse);
+  // 4. Fetch matching problem from database
+  const { data: problem } = await supabaseServer
+    .from('problems_bank')
+    .select('*')
+    .eq('topic', parsed.topic)
+    .eq('difficulty', parsed.difficulty)
+    .limit(1)
+    .single();
+  // 5. Log agent decision
+  await supabaseServer.from('agent_decisions').insert({
+    session_id: sessionId,
+    decision_type: parsed.decision_type,
+    reasoning: parsed.reasoning,
+  });
+  return NextResponse.json({ problem, reasoning: parsed.reasoning });
+}
+5.2 POST /api/evaluate — Solution Assessment
+Evaluates the student's code submission. Uses Groq for speed. Updates learner model in Supabase. Generates mode-appropriate feedback.
+Request Body
+{
+  sessionId: string,
+  problemId: string,
+  code: string,
+  language: 'python' | 'java' | 'cpp' | 'javascript',
+  explanationMode: 'simple' | 'complex',
+  timeTaken: number,          // seconds
+  attemptsCount: number
+}
+Response
+{
+  correct: boolean,
+  feedback: string,           // Mode-adapted explanation
+  mistakePattern?: string,    // e.g. 'off_by_one', 'wrong_base_case'
+  timeComplexity?: string,    // Only in complex mode
+  spaceComplexity?: string,   // Only in complex mode
+  confidenceUpdate: { topic: string, newValue: number }
+}
+Mistake Pattern Detection
+After evaluation, the route classifies the mistake into one of five named patterns. After 3 occurrences of the same pattern, a personalized mental model fix is generated.
+Implementation
+// app/api/evaluate/route.ts
+import { groq, GROQ_FAST } from '@/lib/agent/groq';
+import { getModePersona } from '@/lib/agent/prompts';
+export async function POST(req: NextRequest) {
+  const { sessionId, problemId, code, language,
+          explanationMode, timeTaken, attemptsCount } = await req.json();
+  // Fetch correct solution from DB
+  const { data: problem } = await supabaseServer
+    .from('problems_bank').select('*').eq('id', problemId).single();
+  const persona = getModePersona(explanationMode);
+  const completion = await groq.chat.completions.create({
+    model: GROQ_FAST,
+    messages: [{
+      role: 'system',
+      content: `${persona} You are a DSA tutor evaluating a student's solution.`
+    }, {
+      role: 'user',
+      content: `
+        Problem: ${problem.title}
+        Correct solution: ${problem.solution}
+        Student's ${language} code: ${code}
+        Time taken: ${timeTaken}s, Attempts: ${attemptsCount}
+        Evaluate: is the solution correct?
+        If wrong: what is the mistake pattern? (off_by_one / null_check_missing /
+          wrong_base_case / wrong_algorithm / visited_not_marked)
+        Generate feedback in the appropriate explanation mode.
+        JSON: { correct, feedback, mistakePattern, timeComplexity, spaceComplexity }
+      `
+    }],
+    response_format: { type: 'json_object' }
+  });
+  const result = JSON.parse(completion.choices[0].message.content!);
+  // Update learner model
+  const confidenceDelta = result.correct ? 0.1 : -0.05;
+  await updateConfidence(sessionId, problem.topic, confidenceDelta);
+  // Log attempt
+  await supabaseServer.from('problem_attempts').insert({
+    session_id: sessionId, problem_id: problemId,
+    topic: problem.topic, attempts_count: attemptsCount,
+    time_taken_seconds: timeTaken,
+    final_status: result.correct ? 'solved' : 'in_progress',
+    mistake_pattern: result.mistakePattern ?? null
+  });
+  return NextResponse.json(result);
+}
+5.3 POST /api/hint — Progressive Hint Generator
+Generates one of three escalating hints per problem. Hints are always targeted to the specific mistake pattern if one is known. Mode-adapted language throughout.
+Request Body
+{
+  sessionId: string,
+  problemId: string,
+  hintLevel: 1 | 2 | 3,       // Which hint to generate
+  explanationMode: 'simple' | 'complex',
+  currentCode?: string,        // Student's current code for targeted hints
+  mistakePattern?: string      // Known mistake pattern from last eval
+}
+Hint Level Rules
+// app/api/hint/route.ts
+export async function POST(req: NextRequest) {
+  const { problemId, hintLevel, explanationMode,
+          currentCode, mistakePattern } = await req.json();
+  const { data: problem } = await supabaseServer
+    .from('problems_bank').select('hints, solution, title').eq('id', problemId).single();
+  // First try pre-written hints from DB (faster, cheaper)
+  if (problem.hints[hintLevel - 1] && !mistakePattern) {
+    return NextResponse.json({ hint: problem.hints[hintLevel - 1] });
+  }
+  // Generate targeted hint via Groq if mistake pattern known
+  const persona = getModePersona(explanationMode);
+  const levelDescriptions = {
+    1: 'a small nudge — no approach revealed',
+    2: 'the high-level approach — no code',
+    3: 'pseudocode — near complete but not runnable'
+  };
+  const completion = await groq.chat.completions.create({
+    model: GROQ_FAST,
+    messages: [{
+      role: 'system', content: `${persona} Generate a Level ${hintLevel} hint.`
+    }, {
+      role: 'user',
+      content: `
+        Problem: ${problem.title}
+        Student code so far: ${currentCode ?? 'not provided'}
+        Known mistake pattern: ${mistakePattern ?? 'none'}
+        Hint level: ${hintLevel} (${levelDescriptions[hintLevel as 1|2|3]})
+        Generate the hint in JSON: { hint: string }
+      `
+    }],
+    response_format: { type: 'json_object' }
+  });
+  const { hint } = JSON.parse(completion.choices[0].message.content!);
+  return NextResponse.json({ hint });
+}
+5.4 GET/POST /api/learner — Learner Model
+GET /api/learner?sessionId=xxx
+Fetches the full learner profile from Supabase. Called on page load to hydrate the Zustand store.
+POST /api/learner — Update After Interaction
+{
+  sessionId: string,
+  topic: string,
+  correct: boolean,
+  timeTaken: number,
+  mistakePattern?: string
+}
+Confidence Update Logic
+// lib/agent/confidence.ts
+export function calculateConfidenceDelta(
+  current: number,
+  correct: boolean,
+  timeTaken: number,
+  attemptsCount: number
+): number {
+  if (correct) {
+    // Reward: more reward for fast, first-attempt solves
+    const speedBonus = timeTaken < 120 ? 0.05 : 0;     // < 2 min = fast
+    const attemptPenalty = attemptsCount > 2 ? -0.02 : 0;
+    return Math.min(0.15 + speedBonus + attemptPenalty, 0.20);
+  } else {
+    // Penalty: small — we don't want to discourage
+    return -0.05;
+  }
+}
+// Clamp confidence between 0.0 and 1.0
+export const clampConfidence = (v: number) => Math.max(0, Math.min(1, v));
+5.5 POST /api/execute — Judge0 Code Execution
+Proxies code execution to Judge0 CE (free, public). Supports Python, Java, C++, and JavaScript. Returns stdout, stderr, and compile errors.
+Judge0 Language IDs
+// app/api/execute/route.ts
+export async function POST(req: NextRequest) {
+  const { code, language, testCases } = await req.json();
+  const languageIds: Record<string, number> = {
+    python: 71, java: 62, cpp: 54, javascript: 63
+  };
+  const results = await Promise.all(testCases.map(async (tc: any) => {
+    const submission = await fetch(
+      `${process.env.NEXT_PUBLIC_JUDGE0_URL}/submissions?base64_encoded=false&wait=true`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_code: code,
+          language_id: languageIds[language],
+          stdin: tc.input,
+          expected_output: tc.expectedOutput,
+        })
+      }
+    );
+    return submission.json();
+  }));
+  return NextResponse.json({
+    results: results.map(r => ({
+      passed: r.status.id === 3,  // 3 = Accepted
+      stdout: r.stdout,
+      stderr: r.stderr,
+      compile_output: r.compile_output,
+      time: r.time,
+      status: r.status.description
+    }))
+  });
+}
+5.6 POST /api/rooms — Multiplayer Room Management
+Create Room
+// POST /api/rooms — Create a new room
+Body: { sessionId: string, mode: 'collaborative' | 'battle' | 'mentor' }
+// Generates a unique 6-character alphanumeric code
+function generateRoomCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 6 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join('');
+}
+// Response: { roomCode: 'DSA42X', roomId: uuid }
+Join Room
+// PATCH /api/rooms — Join existing room
+Body: { roomCode: string, sessionId: string }
+// 1. Find room by roomCode
+// 2. Check room.status === 'waiting'
+// 3. Insert into room_members (role: 'player_two')
+// 4. Update room.status = 'active'
+// 5. Return { roomId, mode, currentProblemId }
+5.7 POST /api/interview — Interview Simulation
+Manages the 45-minute mock interview session. Agent plays interviewer, asks follow-up questions, and generates a final performance report.
+// POST /api/interview/feedback — Generate final performance report
+Body: {
+  sessionId: string,
+  explanationMode: 'simple' | 'complex',
+  problems: [{ id, code, timeTaken, followUpAnswers }],
+  totalTime: number
+}
+// Uses Gemini 1.5 Flash for long-form analysis
+// Returns: {
+//   timeManagementScore: number,   // 0–100
+//   approachQualityScore: number,
+//   communicationScore: number,
+//   overallPercentile: number,      // vs other users
+//   feedback: string,               // Mode-adapted full report
+//   nextSteps: string[]             // 3 specific improvement areas
+// }
+6. Database Schema (Supabase)
+All tables created in Supabase. No ORM needed — use the @supabase/supabase-js client directly. Run these SQL commands in the Supabase SQL Editor.
+6.1 learner_profiles
+One row per student session. Confidence scores are floats between 0.0 and 1.0.
+CREATE TABLE learner_profiles (
+  session_id          TEXT PRIMARY KEY,
+  explanation_mode    TEXT DEFAULT 'simple',   -- 'simple' | 'complex'
+  arrays_confidence   FLOAT DEFAULT 0.5,
+  trees_confidence    FLOAT DEFAULT 0.5,
+  graphs_confidence   FLOAT DEFAULT 0.5,
+  dp_confidence       FLOAT DEFAULT 0.5,
+  recursion_confidence FLOAT DEFAULT 0.5,
+  sorting_confidence  FLOAT DEFAULT 0.5,
+  searching_confidence FLOAT DEFAULT 0.5,
+  strings_confidence  FLOAT DEFAULT 0.5,
+  heaps_confidence    FLOAT DEFAULT 0.5,
+  linked_lists_confidence FLOAT DEFAULT 0.5,
+  total_problems_attempted INT DEFAULT 0,
+  current_streak      INT DEFAULT 0,
+  target_company      TEXT DEFAULT NULL,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+6.2 problem_attempts
+Logs every single interaction — powers pattern detection and the agent's memory.
+CREATE TABLE problem_attempts (
+  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id      TEXT REFERENCES learner_profiles(session_id),
+  problem_id      TEXT NOT NULL,
+  topic           TEXT NOT NULL,
+  attempts_count  INT DEFAULT 1,
+  hints_used      INT DEFAULT 0,
+  time_taken_seconds INT,
+  final_status    TEXT,   -- 'solved' | 'gave_up' | 'in_progress'
+  mistake_pattern TEXT,   -- 'off_by_one' | 'null_check_missing' | ...
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_attempts_session ON problem_attempts(session_id);
+CREATE INDEX idx_attempts_topic ON problem_attempts(topic);
+6.3 problems_bank
+Pre-seed with 30+ problems before the hackathon demo. Use the seed script in Section 10.
+CREATE TABLE problems_bank (
+  id          TEXT PRIMARY KEY,
+  title       TEXT NOT NULL,
+  topic       TEXT NOT NULL,
+  difficulty  TEXT NOT NULL,   -- 'Easy' | 'Medium' | 'Hard'
+  description TEXT NOT NULL,
+  examples    JSONB,           -- [{ input, output, explanation }]
+  hints       JSONB,           -- Array of exactly 3 hint strings
+  solution    TEXT,            -- Reference solution code
+  time_complexity  TEXT,
+  space_complexity TEXT,
+  companies   TEXT[],          -- ['Google', 'Amazon', 'Meta']
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+6.4 agent_decisions
+Every agent decision is logged here. This powers the reasoning panel — proves to judges the system is an autonomous agent.
+CREATE TABLE agent_decisions (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id    TEXT REFERENCES learner_profiles(session_id),
+  decision_type TEXT,   -- 'next_problem' | 'give_hint' | 'reveal_answer'
+  reasoning     TEXT,   -- Full plain English explanation shown to student
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+6.5 rooms + room_members (Multiplayer)
+CREATE TABLE rooms (
+  id                 UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  room_code          TEXT UNIQUE NOT NULL,
+  mode               TEXT,   -- 'collaborative' | 'battle' | 'mentor'
+  status             TEXT DEFAULT 'waiting',  -- 'waiting'|'active'|'finished'
+  current_problem_id TEXT,
+  created_at         TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE room_members (
+  id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  room_id          UUID REFERENCES rooms(id),
+  session_id       TEXT REFERENCES learner_profiles(session_id),
+  role             TEXT,   -- 'player_one'|'player_two'|'mentor'|'learner'
+  current_code     TEXT DEFAULT '',
+  cursor_position  JSONB,
+  status           TEXT DEFAULT 'active',
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+-- Enable Realtime on room_members for live code sync
+ALTER TABLE room_members REPLICA IDENTITY FULL;
+7. Supabase Client Setup
+// lib/supabase/server.ts  — Used inside API routes (server-side)
+import { createClient } from '@supabase/supabase-js';
+export const supabaseServer = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!  // Service role — bypasses RLS
+);
+// lib/supabase/browser.ts  — Used in React components (client-side)
+import { createBrowserClient } from '@supabase/ssr';
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!  // Anon key — safe for browser
+  );
+}
+8. Key Helper Functions
+8.1 Update Confidence (lib/agent/confidence.ts)
+export async function updateConfidence(
+  sessionId: string,
+  topic: string,
+  delta: number
+): Promise<void> {
+  const columnName = `${topic}_confidence`;
+  // Fetch current value
+  const { data } = await supabaseServer
+    .from('learner_profiles')
+    .select(columnName)
+    .eq('session_id', sessionId)
+    .single();
+  const currentValue = data?.[columnName] ?? 0.5;
+  const newValue = Math.max(0, Math.min(1, currentValue + delta));
+  await supabaseServer
+    .from('learner_profiles')
+    .update({ [columnName]: newValue, updated_at: new Date().toISOString() })
+    .eq('session_id', sessionId);
+}
+8.2 Spaced Repetition Check (lib/agent/spaced.ts)
+// Returns topics that haven't been practiced in 48+ hours
+export async function getDueTopics(sessionId: string): Promise<string[]> {
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabaseServer
+    .from('problem_attempts')
+    .select('topic')
+    .eq('session_id', sessionId)
+    .gt('created_at', cutoff);
+  const recentTopics = new Set(data?.map(r => r.topic));
+  const allTopics = ['arrays','trees','graphs','dp','recursion',
+    'sorting','searching','strings','heaps','linked_lists'];
+  return allTopics.filter(t => !recentTopics.has(t));
+}
+8.3 Mistake Pattern Aggregator
+// Returns the most frequent mistake pattern for a session
+export async function getTopMistakePattern(
+  sessionId: string
+): Promise<string | null> {
+  const { data } = await supabaseServer
+    .from('problem_attempts')
+    .select('mistake_pattern')
+    .eq('session_id', sessionId)
+    .not('mistake_pattern', 'is', null);
+  if (!data?.length) return null;
+  const counts: Record<string, number> = {};
+  data.forEach(r => {
+    if (r.mistake_pattern) {
+      counts[r.mistake_pattern] = (counts[r.mistake_pattern] ?? 0) + 1;
+    }
+  });
+  return Object.entries(counts).sort(([,a],[,b]) => b - a)[0]?.[0] ?? null;
+}
+9. Error Handling & API Resilience
+The primary AI is Groq. Gemini is the fallback for complex reasoning routes. If both fail, return a graceful error — never crash the frontend.
+// lib/agent/withFallback.ts
+export async function withFallback<T>(
+  primary: () => Promise<T>,
+  fallback: () => Promise<T>,
+  defaultValue: T
+): Promise<T> {
+  try {
+    return await primary();
+  } catch (primaryError) {
+    console.error('Primary AI failed:', primaryError);
+    try {
+      return await fallback();
+    } catch (fallbackError) {
+      console.error('Fallback AI failed:', fallbackError);
+      return defaultValue;
+    }
+  }
+}
+// Usage in a route:
+const result = await withFallback(
+  () => groqCall(prompt),
+  () => geminiChat(prompt),
+  { reasoning: 'Agent is thinking...', problem: defaultProblem }
+);
+9.2 Rate Limit Handling
+10. Problem Bank Seed Script
+Run this before the hackathon demo. Seeds 30 problems across all 10 DSA topics. Each problem includes 3 pre-written progressive hints to reduce AI calls during demo.
+// scripts/seed-problems.ts
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+const problems = [
+  {
+    id: 'arrays-001',
+    title: 'Two Sum',
+    topic: 'arrays',
+    difficulty: 'Easy',
+    description: 'Given an array of integers nums and an integer target, return indices of the two numbers that add up to target.',
+    examples: [{ input: 'nums=[2,7,11,15], target=9', output: '[0,1]' }],
+    hints: [
+      'Think about what you need to find: two numbers that add up to target.',
+      'Can you use a dictionary/hashmap to store numbers you have already seen?',
+      'For each number x, check if (target - x) is already in your hashmap.'
+    ],
+    solution: 'def twoSum(nums, target): seen={}; ...',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(n)',
+    companies: ['Google', 'Amazon', 'Meta']
+  },
+  // ... 29 more problems
+];
+async function seed() {
+  const { error } = await supabase.from('problems_bank').insert(problems);
+  if (error) console.error('Seed failed:', error);
+  else console.log(`Seeded ${problems.length} problems.`);
+}
+seed();
+// Run with: npx ts-node scripts/seed-problems.ts
+Ensure you have at least 3 problems per topic across Easy / Medium / Hard levels. The agent needs variety to make meaningful decisions during the demo.
+11. Environment Variables
+12. Deployment (Vercel)
+Next.js API routes deploy automatically as Vercel serverless functions. No extra configuration needed.
+# Install Vercel CLI
+npm install -g vercel
+# Deploy from project root
+vercel --prod
+# Set environment variables in Vercel dashboard:
+# Settings → Environment Variables → Add all .env.local variables
+# Or set via CLI:
+vercel env add GROQ_API_KEY
+vercel env add GEMINI_API_KEY
+vercel env add NEXT_PUBLIC_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+13. 24-Hour Backend Build Checklist
+This is the exact order to build the backend. Do not skip ahead.
+Hours 0–2: Setup
+Create Supabase project at supabase.com (free, no credit card)
+Run all CREATE TABLE SQL statements from Section 6 in Supabase SQL Editor
+Enable Realtime on room_members table (run the ALTER TABLE command)
+Copy all env vars to .env.local
+Test Groq: node -e 'require("openai")' from project root
+Test Gemini: run a basic geminiChat("Hello") call, console.log result
+Run seed script: npx ts-node scripts/seed-problems.ts
+Hours 3–6: Core API Routes
+Build lib/agent/groq.ts and lib/agent/gemini.ts clients
+Build lib/agent/prompts.ts with getModePersona() function
+Build POST /api/agent — test with Postman, verify Gemini returns JSON
+Build POST /api/evaluate — test with correct + wrong code samples
+Build POST /api/hint — test all 3 hint levels
+Build GET + POST /api/learner — verify Supabase reads/writes correctly
+Build POST /api/execute — test with a simple Python 'Hello World' via Judge0
+Test all 5 routes with Postman before touching any UI
+Hours 7–10: Integration with Frontend
+Coordinate with Hamood — confirm all request/response shapes match
+Test end-to-end: submit wrong answer → evaluate → update confidence → agent picks next problem
+Verify explanationMode flows through every AI call
+Add withFallback() wrapper to /api/agent and /api/evaluate
+Hours 11–14: Dashboard Data
+Build GET /api/learner/history — returns problem_attempts for chart data
+Build GET /api/learner/stats — aggregated accuracy per topic
+Verify confidence values update in Supabase after each submission
+Hours 15–17: Additional Features
+Build POST /api/interview/question — generate follow-up interview questions
+Build POST /api/interview/feedback — full performance report via Gemini
+Build mistake pattern aggregator — triggers after 3 occurrences
+Hours 18–20: Multiplayer
+Build POST /api/rooms (create) and PATCH /api/rooms (join)
+Test room creation: verify 6-char code generated and stored in Supabase
+Test Supabase Realtime: open two browser tabs, type in one, verify other updates
+Build multiplayer agent endpoint: POST /api/agent/multiplayer (handles two sessions)
+Hours 21–22: Polish + Security
+Add input validation to all routes (check required fields, reject bad requests)
+Add try/catch to every Supabase and AI call
+Test rate limit handling — simulate Groq failure, verify Gemini fallback works
+Verify SUPABASE_SERVICE_ROLE_KEY is not exposed in any client-side file
+Run full end-to-end flow: onboarding → session → solve → dashboard → multiplayer
+14. Security Checklist
+— End of Backend Developer Document —
+AAYAM 2026 · 24-Hour National Hackathon · Track 1: Build an AI Agent
+Runtime
+Next.js API Routes | Primary AI
+Groq (llama-3.3-70b) | Secondary AI
+Gemini 1.5 Flash | Database
+Supabase (Free)
+Core Responsibility | Build the AI brain of the agent — the decision engine, hint generator, solution evaluator, learner model updater, and multiplayer room manager. Every AI call must respect the user's chosen explanation mode (Simple/Complex).
+Key Decision | Groq handles fast real-time calls (solution evaluation, hints). Gemini handles complex reasoning calls (next problem decision, reasoning panel text, interview feedback). This splits load across both free tiers.
+Call Type | Model Used | Reason
+Solution evaluation | Groq llama-3.1-8b-instant | Must be fast — student is waiting after submit
+Hint generation | Groq llama-3.1-8b-instant | Speed matters for UX flow
+Next problem decision | Gemini 1.5 Flash | Complex reasoning — needs full learner history
+Agent reasoning panel | Gemini 1.5 Flash | Nuanced multi-paragraph plain English explanation
+Interview feedback | Gemini 1.5 Flash | Long-form performance analysis
+Onboarding quiz eval | Groq llama-3.1-8b-instant | Rapid 5 questions, fast turnaround needed
+Route | Effect of Mode
+/api/agent | Mode injected into system prompt for problem selection reasoning. Simple: agent explains why in plain language. Complex: agent references complexity, interview frequency, pattern types.
+/api/evaluate | Mode controls feedback tone. Simple: 'Great try! Here is what happened step by step.' Complex: 'Your solution has O(n²) time complexity. Consider optimizing with a hash map for O(n).'
+/api/hint | Mode controls hint vocabulary. Simple: analogies and real-world comparisons. Complex: algorithmic approach, pseudocode, complexity hints.
+/api/interview | Mode controls interviewer persona. Simple: encouraging, patient interviewer. Complex: strict, time-pressured FAANG-style interviewer.
+Pattern Name | What It Means
+off_by_one | Loop boundary errors — iterating one index too far or too short
+null_check_missing | Failing to handle null/None input or empty structures
+wrong_base_case | Incorrect recursion termination condition
+wrong_algorithm | Chose a fundamentally incorrect approach (e.g. DFS where BFS needed)
+visited_not_marked | In graph problems — not tracking visited nodes, causing infinite loops
+Level | Rules
+Level 1 — Nudge | A small directional clue. Does NOT reveal approach. Simple: real-world analogy. Complex: mentions relevant data structure or pattern name.
+Level 2 — Approach | Reveals the high-level strategy. Simple: step-by-step explanation with example. Complex: algorithm name + why it applies + complexity hint.
+Level 3 — Pseudocode | Near-complete solution in plain pseudocode. Simple: written like instructions, not code. Complex: proper pseudocode with loop/condition structure.
+Language | Judge0 Language ID
+Python 3 | 71
+Java | 62
+C++ (GCC 9.2) | 54
+JavaScript (Node.js) | 63
+Security | NEVER expose SUPABASE_SERVICE_ROLE_KEY to the browser. It must only be used in server-side API routes. The browser client uses the anon key only.
+Service | Strategy
+Groq (14,400 req/day) | Add 1-second retry with exponential backoff. Log failed requests. For demo: cache last hint response client-side.
+Gemini (1,500 req/day, 15 req/min) | Debounce decision calls — minimum 4 seconds between agent decision requests. Fallback to Groq for simpler reasoning.
+Judge0 (100 sub/day free) | Cache test case results by (problemId + code hash). Most submissions will be retries of same code.
+Supabase (500MB) | No concern for 24-hour hackathon. Free tier is sufficient.
+Variable | How to Get It
+GROQ_API_KEY | console.groq.com — free, no credit card. Primary AI.
+GEMINI_API_KEY | aistudio.google.com — free, no credit card. Fallback AI.
+NEXT_PUBLIC_SUPABASE_URL | Supabase dashboard → Settings → API → Project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase dashboard → Settings → API → anon public key
+SUPABASE_SERVICE_ROLE_KEY | Supabase dashboard → Settings → API → service_role key (NEVER expose to browser)
+NEXT_PUBLIC_JUDGE0_URL | https://ce.judge0.com (public free tier, no API key required)
+NEXT_PUBLIC_APP_URL | http://localhost:3000 (dev) or your Vercel deployment URL (prod)
+Free Tier | Vercel Hobby plan: unlimited deploys, 100GB bandwidth/month, 100 serverless function executions per day per function. More than sufficient for a hackathon demo.
+Risk | Mitigation
+API Key Exposure | GROQ_API_KEY, GEMINI_API_KEY, SUPABASE_SERVICE_ROLE_KEY must ONLY appear in server-side route files. Never in components, hooks, or files prefixed with NEXT_PUBLIC_.
+Input Validation | Validate sessionId, explanationMode ('simple'|'complex'), hintLevel (1|2|3) in every route. Reject unexpected values with 400 status.
+Code Execution | Judge0 CE runs code in isolated sandboxes. Never execute student code directly on your server.
+Supabase RLS | For hackathon: service role bypasses RLS. Post-hackathon: enable Row Level Security policies on all tables.
+.env.local in .gitignore | Ensure .env.local is listed in .gitignore before first git push. Never commit API keys to GitHub.

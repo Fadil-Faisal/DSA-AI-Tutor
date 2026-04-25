@@ -1,0 +1,401 @@
+Adaptive DSA Tutor Agent
+Frontend Developer Document
+Prepared for: Hamood Ayoob Khan
+AAYAM 2026 · 24-Hour National Hackathon · Track 1: Build an AI Agent
+1. Project Overview
+The Adaptive DSA Tutor Agent is a fully autonomous AI agent that builds a real-time cognitive model of each student. It tracks every answer, hesitation, and wrong turn, then continuously decides what to teach next, how hard to push, when to give hints, and when a student is ready to move on.
+This document is the complete frontend implementation guide for Hamood Ayoob Khan. It covers the project structure, every page and component, state management, API integration, the two-stage explanation system (Simple / Complex mode), UI/UX guidelines, and a step-by-step build checklist.
+2. Tech Stack Justification
+All tools are free-tier or open source.
+3. Project File Structure
+The entire project lives in a single Next.js monorepo. No separate frontend or backend server — Next.js API Routes serve as the backend.
+dsa-tutor/
+├── app/                          # Next.js App Router pages
+│   ├── page.tsx                  # Landing + Onboarding Quiz
+│   ├── session/page.tsx          # Main solo tutor session
+│   ├── dashboard/page.tsx        # Knowledge graph + progress
+│   ├── interview/page.tsx        # Interview simulation mode
+│   ├── multiplayer/
+│   │   ├── page.tsx              # Create or join room
+│   │   └── [roomCode]/page.tsx   # Active multiplayer session
+│   └── api/                      # Backend API routes
+│       ├── agent/route.ts        # Core decision engine
+│       ├── evaluate/route.ts     # Solution assessment
+│       ├── hint/route.ts         # Progressive hint generator
+│       ├── learner/route.ts      # Read + update learner model
+│       ├── execute/route.ts      # Judge0 code execution
+│       └── rooms/route.ts        # Room create + join
+├── components/
+│   ├── editor/                   # Monaco + language selector
+│   ├── graph/                    # React Flow topic nodes
+│   ├── agent/                    # Reasoning panel + hints
+│   ├── dashboard/                # Charts + heatmap
+│   ├── multiplayer/              # Lobby + shared editor + battle
+│   ├── interview/                # Timer + report
+│   └── ui/                       # shadcn auto-generated
+├── lib/
+│   ├── agent/                    # Groq + Gemini clients + prompts
+│   ├── supabase/                 # Browser + server clients
+│   └── problems/                 # Problem bank fetcher
+├── hooks/
+│   ├── useLearnerModel.ts
+│   ├── useAgent.ts
+│   ├── useTimer.ts
+│   └── useVoice.ts
+├── store/
+│   └── learnerStore.ts           # Zustand store
+└── types/
+    ├── learner.ts
+    ├── problem.ts
+    └── room.ts
+4. Pages — Detailed Breakdown
+4.1 Landing + Onboarding Quiz (app/page.tsx)
+The first screen the user sees. It bootstraps the learner model with a 5-question rapid-fire quiz covering Arrays, Trees, Graphs, Recursion, and DP. Tracks both correctness and time taken to set initial confidence scores.
+Simple vs Complex Mode — The Two-Stage Explanation System
+This is one of the key differentiators of this project. When a user selects their mode at the start, it persists in Zustand state and controls every AI prompt sent throughout the session.
+Implementation: Store mode in Zustand as learnerStore.explanationMode. Every API call to /api/agent and /api/hint includes this value. The backend appends the appropriate persona instruction to the AI system prompt.
+4.2 Main Session (app/session/page.tsx)
+The core screen where the student learns. Split into three main panels — Problem Panel, Code Editor, and Agent Panel.
+Component Tree for Session Page
+<SessionPage>
+  <SessionHeader>                    // Mode badge, streak, topic progress
+    <ExplanationModeBadge />
+    <StreakCounter />
+  </SessionHeader>
+  <SessionLayout>                    // Three-column flex layout
+    <ProblemPanel>
+      <DifficultyBadge />
+      <TopicTag />
+      <ProblemDescription />
+      <ExamplesBlock />
+    </ProblemPanel>
+    <EditorPanel>
+      <TimerBar />                   // Live countdown
+      <LanguageSelector />
+      <MonacoEditor />
+      <EditorToolbar>
+        <RunButton />
+        <SubmitButton />
+        <ResetButton />
+      </EditorToolbar>
+      <OutputPanel />
+      <HintSection>
+        <HintButton />
+        <HintReveal level={1|2|3} />
+      </HintSection>
+    </EditorPanel>
+    <AgentPanel>
+      <AgentReasoningCard />         // Why agent chose this problem
+      <ConfidenceRadar />            // Mini radar of topic scores
+    </AgentPanel>
+  </SessionLayout>
+</SessionPage>
+4.3 Dashboard (app/dashboard/page.tsx)
+Visual representation of the student's learning progress. Shows live knowledge graph, confidence charts, streak heatmap, and topic-wise analysis.
+4.4 Interview Simulation (app/interview/page.tsx)
+45-minute timed mock interview. 2 problems. No hints. Agent plays interviewer and asks follow-up questions. Generates performance report at the end.
+4.5 Multiplayer (app/multiplayer/)
+Two students join the same room with a 6-character code (e.g. DSA42X). Synced via Supabase Realtime.
+5. Global Components
+These components are reused across multiple pages.
+6. State Management — Zustand Store
+A single Zustand store manages all client-side state. Immer is used for clean nested updates to the learner model.
+// store/learnerStore.ts
+interface LearnerStore {
+  // Identity
+  sessionId: string;
+  explanationMode: 'simple' | 'complex';  // THE TWO-STAGE SYSTEM
+  // Learner model (mirrors Supabase learner_profiles)
+  confidence: {
+    arrays: number;      trees: number;      graphs: number;
+    dp: number;          recursion: number;  sorting: number;
+    searching: number;   strings: number;    heaps: number;
+    linkedLists: number;
+  };
+  // Current session
+  currentProblem: Problem | null;
+  currentHintLevel: 0 | 1 | 2 | 3;
+  timerStarted: boolean;
+  timerSeconds: number;
+  // Agent state
+  agentReasoning: string;
+  agentLoading: boolean;
+  // Actions
+  setExplanationMode: (mode: 'simple' | 'complex') => void;
+  updateConfidence: (topic: string, value: number) => void;
+  setCurrentProblem: (problem: Problem) => void;
+  incrementHintLevel: () => void;
+  setAgentReasoning: (text: string) => void;
+}
+7. API Integration — What the Frontend Calls
+The frontend never calls Groq or Gemini directly. All AI calls go through Next.js API routes. The explanationMode is always sent with every request.
+Example: Fetching Next Problem with Mode
+// hooks/useAgent.ts
+async function fetchNextProblem() {
+  const { sessionId, confidence, explanationMode } = useLearnerStore.getState();
+  const res = await fetch('/api/agent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, confidence, explanationMode }),
+  });
+  const { problem, reasoning } = await res.json();
+  useLearnerStore.getState().setCurrentProblem(problem);
+  useLearnerStore.getState().setAgentReasoning(reasoning);
+}
+8. Supabase Realtime — Multiplayer Sync
+Multiplayer uses Supabase Realtime to sync code and state between two browser windows. No Pusher or Socket.io needed.
+// In [roomCode]/page.tsx
+const supabase = createClient();
+// Subscribe to room member changes
+const channel = supabase
+  .channel(`room:${roomCode}`)
+  .on('postgres_changes', {
+    event: 'UPDATE',
+    schema: 'public',
+    table: 'room_members',
+    filter: `room_id=eq.${roomId}`,
+  }, (payload) => {
+    // Update opponent's code in Monaco editor
+    setOpponentCode(payload.new.current_code);
+    setOpponentCursor(payload.new.cursor_position);
+  })
+  .subscribe();
+// Send own code changes
+const handleCodeChange = (code: string) => {
+  debouncedUpdate(() => {
+    supabase.from('room_members').update({
+      current_code: code
+    }).eq('session_id', sessionId);
+  }, 300);  // debounce 300ms
+};
+9. UI/UX Design Guidelines
+The UI must make the agent's intelligence visible at every step. Every design decision should reinforce that this is an agent, not a chatbot.
+9.1 Color System
+9.2 Animation Principles (Framer Motion)
+9.3 Responsive Layout
+10. TypeScript Type Definitions
+// types/learner.ts
+export type ExplanationMode = 'simple' | 'complex';
+export interface LearnerProfile {
+  session_id: string;
+  explanation_mode: ExplanationMode;
+  arrays_confidence: number;
+  trees_confidence: number;
+  graphs_confidence: number;
+  dp_confidence: number;
+  recursion_confidence: number;
+  sorting_confidence: number;
+  searching_confidence: number;
+  strings_confidence: number;
+  heaps_confidence: number;
+  linked_lists_confidence: number;
+  current_streak: number;
+  total_problems_attempted: number;
+  target_company: string | null;
+}
+// types/problem.ts
+export interface Problem {
+  id: string;
+  title: string;
+  topic: DSATopic;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  description: string;
+  examples: Example[];
+  hints: [string, string, string];  // 3 progressive hints
+  solution: string;
+  time_complexity: string;
+  space_complexity: string;
+  companies: string[];
+}
+export type DSATopic = 'arrays' | 'trees' | 'graphs' | 'dp' |
+  'recursion' | 'sorting' | 'searching' | 'strings' | 'heaps' | 'linked_lists';
+11. Environment Setup
+11.1 Installation
+# Clone repo
+git clone https://github.com/your-org/dsa-tutor.git
+cd dsa-tutor
+# Install all dependencies
+npm install
+# Install shadcn/ui base
+npx shadcn-ui@latest init
+# Add needed shadcn components
+npx shadcn-ui@latest add button card badge progress tabs dialog
+11.2 Environment Variables
+Create a .env.local file in the project root and add all variables above. Never commit this file to Git.
+11.3 Running Locally
+npm run dev          # Start development server on http://localhost:3000
+npm run build        # Production build
+npm run start        # Run production build locally
+npm run lint         # ESLint check
+npm run type-check   # TypeScript check
+12. 24-Hour Frontend Build Checklist
+Follow this order exactly. Core features first, polish last.
+Hours 0–2: Foundation
+Run: npx create-next-app@latest dsa-tutor --typescript --tailwind --app
+Install all packages from Section 2 of this document
+Create Supabase project, create all tables from Section 11 database schema
+Set up .env.local with all environment variables
+Test Groq API call from /api/agent route (just console.log the response)
+Test Gemini API call from /api/agent route
+Seed problems_bank table with at least 30 problems
+Hours 3–6: Core Logic
+Build /api/agent route with decision engine (lowest confidence topic selection)
+Build /api/evaluate route (send code + question to Groq for assessment)
+Build /api/hint route (progressive 3-level hint generation)
+Build /api/learner GET + POST routes
+Build /api/execute route (proxy to Judge0)
+Test all routes with Postman before touching UI
+Hours 7–10: Session UI
+Build Monaco editor component with language selector
+Build problem statement panel with difficulty + topic badges
+Build agent reasoning panel with typewriter animation
+Connect 'Get Hint' button to /api/hint, reveal hints progressively
+Connect Submit button to /api/evaluate, show result
+Wire live timer with useTimer hook
+Build onboarding quiz (app/page.tsx) with 5 questions
+Build Simple/Complex mode selector — store in Zustand
+Hours 11–14: Dashboard
+Build React Flow knowledge graph with 10 colored topic nodes
+Connect node colors to live Supabase confidence data
+Build Recharts confidence line chart
+Build streak heatmap (can use recharts or simple CSS grid)
+Build topic stats table with strong/medium/weak labels
+Hours 15–17: Additional Features
+Voice explanation mode using Web Speech API (browser built-in, zero packages)
+Company-specific filtering (add company selector to session header)
+Interview simulation page with 45-min timer
+PDF export using jsPDF + html2canvas on session summary
+Hours 18–20: Multiplayer
+Add room create + join UI
+Wire Supabase Realtime subscription for code sync
+Build collaborative mode with dual cursors
+Build battle mode end screen with side-by-side comparison
+Hours 21–22: Polish
+Fix all responsive layout issues
+Add loading skeleton states everywhere AI is loading
+Add error boundaries on all pages
+Test complete user flow end to end
+Test multiplayer in two browser tabs
+Hour 23: Submission
+Push to public GitHub with 20+ meaningful commit messages
+Write README.md with screenshots and live demo link
+Deploy to Vercel: vercel --prod (set all env vars in Vercel dashboard)
+Verify live deployment works on mobile
+Submit GitHub URL + Vercel URL
+13. Demo Script (Frontend View — 3 Minutes)
+During the demo, the frontend tells the story. Every second must be visual.
+— End of Frontend Developer Document —
+AAYAM 2026 · 24-Hour National Hackathon · Track 1: Build an AI Agent
+Framework
+Next.js 14 + TS | Styling
+Tailwind + shadcn/ui | State
+Zustand + Immer | Deploy
+Vercel (Free)
+Key Goal | Build a visually stunning, interactive React frontend that makes the agent's intelligence visible — every decision the agent makes must be surfaced to the user in real time.
+Package | Purpose | Justification
+Next.js 14 (App Router) | Core framework | Free Vercel deployment, server components, API routes in one repo — no separate backend needed for demo
+React 18 + TypeScript 5 | UI library + types | Type safety prevents runtime errors during 24-hour build; catches props mistakes early
+Tailwind CSS 3 | Styling | Chosen over CSS Modules — utility classes eliminate context switching; shadcn/ui is built on Tailwind
+shadcn/ui | Component library | Accessible, copy-paste components; no install bloat; fully customizable
+Zustand + Immer | State management | Lighter than Redux; Immer allows clean immutable updates for nested learner model JSON
+Framer Motion | Animations | Knowledge graph color transitions, hint reveal animations, onboarding quiz flow
+@monaco-editor/react | Code editor | Full VS Code experience in browser; supports Python, Java, C++, JavaScript
+React Flow + dagre | Knowledge graph | Topic nodes with live confidence colors; auto-layout; cinematic demo moment
+Recharts | Charts | Confidence trend charts and accuracy graphs on dashboard
+jsPDF + html2canvas | PDF export | Client-side session summary export — no server needed
+date-fns | Date utilities | Streak calendar and spaced repetition due date formatting
+Component | What It Renders
+Hero Section | App title, tagline, and 'Start Learning' button
+Mode Selector | Two large cards: Simple Mode (10-year-old) and Complex Mode (20-year-old)
+Quiz Modal | 5 MCQ questions, progress bar, live timer per question
+Quiz Results | Score, time taken per topic, initial confidence preview
+Session Creation | Creates session_id in Supabase, seeds learner_profiles row
+Aspect | Simple Mode (10-year-old) | Complex Mode (20-year-old)
+Language | Plain analogies, everyday objects, zero jargon | Technical terminology, Big-O notation, CS vocabulary
+Explanations | 'An array is like a row of lockers in school' | 'An array is a contiguous block of memory with O(1) random access'
+Hints | Step-by-step with visual metaphors | Algorithmic approach, complexity tradeoffs
+Problem Set | Easy + selected Medium problems | Medium + Hard problems, interview-style
+AI Prompt | Appends: Explain like I'm 10 years old | Appends: Use technical CS terminology
+UI Indicator | Blue badge: Simple Mode | Purple badge: Complex Mode
+Panel | Contents
+Problem Statement Panel (left) | Title, difficulty badge, topic tag, description, examples, constraints. Shows current explanation mode badge.
+Monaco Code Editor (center) | Full VS Code-like editor. Language selector dropdown (Python / Java / C++ / JavaScript). Run Code button. Submit button. Reset button.
+Agent Reasoning Panel (right) | Shows agent's internal decision in plain English. Updates after each submission. This is the #1 demo feature — shows judges the system is an agent, not a chatbot.
+Hint Panel (bottom of editor) | 'Get Hint' button. Reveals hints progressively: Hint 1 → Hint 2 → Hint 3. Hints are adapted to Simple or Complex mode.
+Live Timer (top of editor) | Counts up from 0:00. Changes color: green (fast), yellow (normal), red (slow). Stops on submission.
+Output Panel (below editor) | Shows test case results from Judge0 code execution. Pass/Fail per case. Runtime. Error messages.
+Component | Description
+Knowledge Graph (React Flow) | 10 DSA topic nodes. Color: Green (>0.75), Yellow (0.40–0.75), Red (<0.40). Edges show topic dependencies. Animates live when problems are solved.
+Confidence Chart (Recharts) | Line chart showing confidence per topic over time. Hover tooltip with session-by-session breakdown.
+Streak Heatmap | GitHub contribution-style calendar. Shows daily practice intensity. Current streak counter in top-right.
+Topic Stats Table | Per-topic: Problems attempted, Accuracy %, Avg time, Status (Strong / Medium / Weak).
+Weak Areas Highlight | Auto-generated list of the 3 lowest-confidence topics with a recommended next problem for each.
+Session History | Accordion list of past sessions with expandable per-problem breakdown.
+Component | Description
+Interview Header | 45:00 countdown timer in red. Problem number (1/2). No hint button visible.
+Interviewer Chat Panel | Agent asks follow-up questions in real time. Chat-style UI. Student types or speaks answers.
+Code Editor | Standard Monaco editor. Submit locks in answer.
+Performance Report | Time management score, approach quality, communication clarity, percentile rank. PDF export button.
+Screen | Contents
+Room Lobby (page.tsx) | Create Room button (generates code). Join Room input field. Mode selector: Collaborative / Battle / Mentor.
+Collaborative Mode | Shared Monaco editor with two cursors (blue + orange). Side chat panel. Agent coaches both by name.
+Battle Mode | Both students get independent editors. Live progress bar shows opponent's typing activity (keystroke count). End screen: both solutions side-by-side with agent comparative analysis.
+Mentor Mode | Mentor sees only the hint panel. Learner sees only the editor. Agent coaches mentor privately on what hint to give.
+Component | Behavior
+<ExplanationModeBadge /> | Pill badge showing current mode. Clicking it opens a modal to switch mode mid-session.
+<AgentReasoningCard /> | White card with blue left border. Animated typing effect for agent reasoning text. Icon: brain emoji.
+<HintReveal level={n} /> | Collapsible card. Shows blurred text that reveals on click. Different styling per level (1=subtle, 3=bright).
+<DifficultyBadge /> | Color-coded pill: Easy=green, Medium=yellow, Hard=red.
+<TopicTag /> | Outline pill showing DSA topic name (e.g. 'Binary Trees').
+<TimerBar /> | Progress-style bar at top of editor. Green→Yellow→Red based on elapsed time vs expected.
+<StreakCounter /> | Flame icon + number in header. Pulses on new record.
+<ConfidenceRing topic={} /> | Circular progress ring using react-circular-progressbar. Color matches confidence level.
+<LoadingState /> | Skeleton loader screens. Used while AI responses are streaming.
+<ErrorBoundary /> | Wraps all pages. Shows friendly error card on crash instead of blank screen.
+Endpoint | Frontend Action | Payload
+POST /api/agent | Request next problem + reasoning | { sessionId, confidence, explanationMode, lastAttempt }
+POST /api/evaluate | Submit solution for assessment | { sessionId, problemId, code, language, explanationMode }
+POST /api/hint | Get next hint level | { sessionId, problemId, hintLevel, explanationMode }
+GET /api/learner | Load learner model | { sessionId }
+POST /api/learner | Update after answer | { sessionId, topic, correct, timeTaken, mistakePattern }
+POST /api/execute | Run code in Judge0 | { code, language, testCases }
+POST /api/rooms | Create multiplayer room | { mode, sessionId }
+PATCH /api/rooms | Join existing room | { roomCode, sessionId }
+Token | Hex | Usage
+Primary Blue | #1E40AF | Agent decisions, headers, key actions
+Success Green | #16A34A | High confidence nodes (>0.75), correct answers
+Warning Yellow | #CA8A04 | Medium confidence (0.40–0.75), approaching deadline
+Danger Red | #DC2626 | Low confidence (<0.40), wrong answers, timer alert
+Background | #F9FAFB | Page backgrounds
+Surface | #FFFFFF | Cards, panels, modals
+Text Primary | #111827 | Main content
+Text Secondary | #6B7280 | Labels, metadata
+Element | Animation
+Knowledge Graph Node | Animate background-color from red → yellow → green on confidence change. Duration: 0.8s ease.
+Hint Reveal | Slide down + fade in. Height from 0 to auto. Duration: 0.3s.
+Agent Reasoning Text | Typewriter effect character by character. Signals active thinking.
+Mode Badge Switch | Scale 0.8 → 1.0 + color transition. Gives tactile feedback.
+Problem Transition | Slide out left, new problem slides in right. Duration: 0.4s.
+Onboarding Quiz | Question slides in from right. Answer selection triggers green/red flash.
+Breakpoint | Layout
+Desktop (>1280px) | Three-column layout: Problem (25%) | Editor (45%) | Agent Panel (30%)
+Laptop (1024–1280px) | Three columns compressed: Problem (25%) | Editor (45%) | Agent (30%)
+Tablet (768–1024px) | Two columns: Problem + Agent stacked (40%) | Editor (60%)
+Mobile (<768px) | Single column. Tab navigation between Problem, Editor, Agent.
+Variable | Where to Get It
+NEXT_PUBLIC_SUPABASE_URL | From Supabase project settings → API
+NEXT_PUBLIC_SUPABASE_ANON_KEY | From Supabase project settings → API
+NEXT_PUBLIC_JUDGE0_URL | https://ce.judge0.com (no key needed)
+NEXT_PUBLIC_APP_URL | http://localhost:3000 (dev) / your Vercel URL (prod)
+GROQ_API_KEY | From console.groq.com — free, no credit card
+GEMINI_API_KEY | From aistudio.google.com — free, no credit card
+SUPABASE_SERVICE_ROLE_KEY | Server-side only — from Supabase settings (never expose to browser)
+Step | Action | What to Say
+1 | Open app | Start in Simple Mode. Onboarding quiz — answer 2 correct, 3 wrong. Watch knowledge graph initialize.
+2 | Enter session | Agent reasoning panel shows why it chose this problem. Point this out: 'This is the agent deciding, not random.'
+3 | Get it wrong | Targeted hint appears. Get it wrong again. Hint escalates to Level 2. Point to the progressive nature.
+4 | Solve it | Knowledge graph node transitions red → yellow live on screen. Cinematic.
+5 | Switch mode | Toggle from Simple to Complex mode mid-session. Show how hints and explanations change.
+6 | Multiplayer | Have teammate join with room code. Select Battle Mode. Both attempt same problem.
+7 | End battle | Agent side-by-side comparison on screen.
+8 | Close | Session summary PDF export. One click.
