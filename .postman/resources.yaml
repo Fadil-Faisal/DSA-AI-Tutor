@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: 1e02f7e6-f1a4-469d-8520-c4c1b39dbb2f
+
+localResources:
+  collections:
+    - ..\dsa-tutor\postman\DSA_Tutor_Agent.postman_collection.json
