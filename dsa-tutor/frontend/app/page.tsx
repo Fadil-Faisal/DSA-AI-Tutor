@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Zap, Target, Users, ChevronRight, CheckCircle, XCircle, Clock, Flame, BarChart3, Code2, Sparkles, GraduationCap, BookOpen, Trophy } from 'lucide-react';
+import { Brain, Zap, Target, Users, ChevronRight, CheckCircle, XCircle, Clock, Flame, BarChart3, Code2, Sparkles, GraduationCap, BookOpen, Trophy, LogOut } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { ExplanationMode, DSATopic } from '@/types/learner';
+import { useAuth } from '@/hooks/useAuth';
 
 // ── Neural Canvas ─────────────────────────────────────────────────────────
 function NeuralCanvas() {
@@ -167,6 +168,15 @@ export default function LandingPage() {
   const [step, setStep] = useState<Step>('hero');
   const [selectedMode, setSelectedMode] = useState<ExplanationMode | null>(null);
   const { setExplanationMode, setConfidenceFromQuiz } = useLearnerStore();
+  const { user, loading: authLoading, signOut } = useAuth();
+
+  // Derive display name: prefer full_name metadata, fall back to email prefix
+  const displayName = user
+    ? (user.user_metadata?.full_name as string | undefined) || user.email?.split('@')[0] || 'Learner'
+    : null;
+  const initials = displayName
+    ? displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
 
   const handleModeConfirm = () => {
     if (!selectedMode) return;
@@ -193,12 +203,60 @@ export default function LandingPage() {
             Neural<span style={{ color: '#60a5fa' }}>DSA</span>
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {[{ href: '/dashboard', label: 'Dashboard' }, { href: '/multiplayer', label: 'Multiplayer' }, { href: '/interview', label: 'Interview' }].map(({ href, label }) => (
             <a key={href} href={href} style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: '#94a3b8', textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148,163,184,0.1)', transition: 'all 0.2s' }}>
               {label}
             </a>
           ))}
+          <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.15)', margin: '0 4px' }} />
+
+          {/* ── Auth-aware section ── */}
+          {!authLoading && (
+            user ? (
+              /* Logged-in: show avatar + name + sign out */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Avatar circle */}
+                <div style={{
+                  width: 34, height: 34, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 800, color: 'white', letterSpacing: '0.03em',
+                  boxShadow: '0 0 12px rgba(59,130,246,0.35)', flexShrink: 0,
+                }}>
+                  {initials}
+                </div>
+                {/* Name only */}
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{displayName}</span>
+                </div>
+                {/* Sign out */}
+                <button
+                  id="nav-signout"
+                  onClick={async () => { await signOut(); router.refresh(); }}
+                  title="Sign out"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '8px', borderRadius: 10, background: 'rgba(244,63,94,0.08)',
+                    border: '1px solid rgba(244,63,94,0.2)', color: '#f43f5e',
+                    cursor: 'pointer', transition: 'all 0.2s', marginLeft: 2,
+                  }}
+                >
+                  <LogOut size={15} />
+                </button>
+              </div>
+            ) : (
+              /* Logged-out: show Sign In + Get Started */
+              <>
+                <a href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#94a3b8', textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148,163,184,0.1)', transition: 'all 0.2s' }}>
+                  Sign In
+                </a>
+                <a href="/register" style={{ padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'white', textDecoration: 'none', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', border: 'none', boxShadow: '0 0 16px rgba(59,130,246,0.3)', transition: 'all 0.2s' }}>
+                  Get Started
+                </a>
+              </>
+            )
+          )}
         </div>
       </nav>
 
