@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Zap, Target, Users, ChevronRight, CheckCircle, XCircle, Clock, Flame, BarChart3, Code2, Sparkles, GraduationCap, BookOpen, Trophy, LogOut } from 'lucide-react';
+import { Brain, Zap, Target, Users, ChevronRight, CheckCircle, XCircle, Clock, Flame, BarChart3, Code2, Sparkles, GraduationCap, BookOpen, Trophy } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { ExplanationMode, DSATopic } from '@/types/learner';
-import { useAuth } from '@/hooks/useAuth';
 
 // ── Neural Canvas ─────────────────────────────────────────────────────────
 function NeuralCanvas() {
@@ -168,15 +167,6 @@ export default function LandingPage() {
   const [step, setStep] = useState<Step>('hero');
   const [selectedMode, setSelectedMode] = useState<ExplanationMode | null>(null);
   const { setExplanationMode, setConfidenceFromQuiz } = useLearnerStore();
-  const { user, loading: authLoading, signOut } = useAuth();
-
-  // Derive display name: prefer full_name metadata, fall back to email prefix
-  const displayName = user
-    ? (user.user_metadata?.full_name as string | undefined) || user.email?.split('@')[0] || 'Learner'
-    : null;
-  const initials = displayName
-    ? displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
 
   const handleModeConfirm = () => {
     if (!selectedMode) return;
@@ -193,73 +183,6 @@ export default function LandingPage() {
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #030712 0%, #060e1e 50%, #030712 100%)', position: 'relative', overflowX: 'hidden' }}>
       <NeuralCanvas />
 
-      {/* Nav */}
-      <nav style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}>
-            <Brain size={18} color="white" />
-          </div>
-          <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 18, color: '#f8fafc', letterSpacing: '-0.02em' }}>
-            Neural<span style={{ color: '#60a5fa' }}>DSA</span>
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {[{ href: '/dashboard', label: 'Dashboard' }, { href: '/multiplayer', label: 'Multiplayer' }, { href: '/interview', label: 'Interview' }].map(({ href, label }) => (
-            <a key={href} href={href} style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: '#94a3b8', textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148,163,184,0.1)', transition: 'all 0.2s' }}>
-              {label}
-            </a>
-          ))}
-          <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.15)', margin: '0 4px' }} />
-
-          {/* ── Auth-aware section ── */}
-          {!authLoading && (
-            user ? (
-              /* Logged-in: show avatar + name + sign out */
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {/* Avatar circle */}
-                <div style={{
-                  width: 34, height: 34, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 800, color: 'white', letterSpacing: '0.03em',
-                  boxShadow: '0 0 12px rgba(59,130,246,0.35)', flexShrink: 0,
-                }}>
-                  {initials}
-                </div>
-                {/* Name only */}
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{displayName}</span>
-                </div>
-                {/* Sign out */}
-                <button
-                  id="nav-signout"
-                  onClick={async () => { await signOut(); router.refresh(); }}
-                  title="Sign out"
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '8px', borderRadius: 10, background: 'rgba(244,63,94,0.08)',
-                    border: '1px solid rgba(244,63,94,0.2)', color: '#f43f5e',
-                    cursor: 'pointer', transition: 'all 0.2s', marginLeft: 2,
-                  }}
-                >
-                  <LogOut size={15} />
-                </button>
-              </div>
-            ) : (
-              /* Logged-out: show Sign In + Get Started */
-              <>
-                <a href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#94a3b8', textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148,163,184,0.1)', transition: 'all 0.2s' }}>
-                  Sign In
-                </a>
-                <a href="/register" style={{ padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'white', textDecoration: 'none', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', border: 'none', boxShadow: '0 0 16px rgba(59,130,246,0.3)', transition: 'all 0.2s' }}>
-                  Get Started
-                </a>
-              </>
-            )
-          )}
-        </div>
-      </nav>
-
       {/* Main */}
       <main style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
         <AnimatePresence mode="wait">
@@ -269,38 +192,30 @@ export default function LandingPage() {
             <motion.div key="hero" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -24 }} transition={{ duration: 0.5 }}
               style={{ textAlign: 'center', maxWidth: 720, width: '100%' }}>
 
-              {/* Hackathon badge */}
-              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 99, border: '1px solid rgba(59,130,246,0.35)', background: 'rgba(59,130,246,0.1)', color: '#93c5fd', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 36 }}>
-                <Sparkles size={13} />
-                AAYAM 2026 · Track 1: Build an AI Agent
-              </motion.div>
-
-              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 'clamp(40px, 8vw, 76px)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 24, color: '#f8fafc' }}>
-                <span style={{ background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Adaptive AI</span>
-                <br />DSA Tutor
+              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 'clamp(52px, 10vw, 96px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.04em', marginBottom: 24, color: '#f8fafc' }}>
+                <span style={{ background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Lhama</span>Learns
               </motion.h1>
 
-              <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                style={{ fontSize: 18, color: '#94a3b8', lineHeight: 1.7, maxWidth: 560, margin: '0 auto 40px', fontWeight: 400 }}>
+              <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                style={{ fontSize: 18, color: '#94a3b8', lineHeight: 1.7, maxWidth: 520, margin: '0 auto 40px', fontWeight: 400 }}>
                 An autonomous agent that builds a <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>real-time cognitive model</strong> of you — then <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>decides what to teach next</strong>.
               </motion.p>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 56 }}>
-                <button onClick={() => setStep('mode')}
+                <button onClick={() => router.push('/register')}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 0 40px rgba(59,130,246,0.35)', letterSpacing: '-0.01em' }}>
-                  <Brain size={20} /> Start Learning <ChevronRight size={18} />
+                  <Brain size={20} /> Get Started <ChevronRight size={18} />
                 </button>
-                <button onClick={() => router.push('/dashboard')}
+                <button onClick={() => router.push('/login')}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: 16, fontWeight: 600, border: '1px solid rgba(148,163,184,0.2)', cursor: 'pointer' }}>
-                  <BarChart3 size={18} /> View Dashboard
+                  <BarChart3 size={18} /> Sign In
                 </button>
               </motion.div>
 
               {/* Feature grid */}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, maxWidth: 580, margin: '0 auto 40px' }}>
                 {FEATURES.map(({ icon, label, color }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)', background: 'rgba(15,23,42,0.6)' }}>
@@ -311,7 +226,7 @@ export default function LandingPage() {
               </motion.div>
 
               {/* Social proof */}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
                 style={{ display: 'flex', gap: 32, justifyContent: 'center', color: '#475569', fontSize: 13 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Flame size={15} color="#f97316" /> 30+ Problems</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={15} color="#eab308" /> 10 Topics</span>
