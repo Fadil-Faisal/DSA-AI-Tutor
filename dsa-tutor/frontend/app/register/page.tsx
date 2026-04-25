@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, Mail, Lock, Eye, EyeOff, User, Zap, AlertCircle, ChevronRight, Calendar,
+  BookOpen, GraduationCap,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/browser';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,9 +81,7 @@ function InputField({
           {icon}
         </span>
         <input
-          id={id}
-          type={type}
-          value={value}
+          id={id} type={type} value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -112,6 +111,84 @@ function InputField({
   );
 }
 
+// ── Difficulty Selector ────────────────────────────────────────────────────
+const DIFFICULTIES = [
+  {
+    value: 'beginner',
+    label: 'Beginner',
+    desc: 'New to DSA — start with the basics',
+    icon: <BookOpen size={18} />,
+    color: '#3b82f6',
+  },
+  {
+    value: 'intermediate',
+    label: 'Intermediate',
+    desc: 'Know the basics, ready for harder problems',
+    icon: <GraduationCap size={18} />,
+    color: '#8b5cf6',
+  },
+] as const;
+
+type Difficulty = 'beginner' | 'intermediate';
+
+function DifficultySelector({
+  value, onChange, error,
+}: {
+  value: Difficulty | null; onChange: (v: Difficulty) => void; error?: string;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        Difficulty Level
+      </span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {DIFFICULTIES.map((d) => {
+          const active = value === d.value;
+          return (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => onChange(d.value)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                gap: 4, padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                border: `1.5px solid ${active ? d.color : 'rgba(148,163,184,0.15)'}`,
+                background: active ? `${d.color}12` : 'rgba(15,23,42,0.7)',
+                boxShadow: active ? `0 0 0 3px ${d.color}20` : 'none',
+                transition: 'all 0.18s', textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ color: active ? d.color : '#475569', transition: 'color 0.18s' }}>
+                  {d.icon}
+                </span>
+                <span style={{
+                  fontSize: 13, fontWeight: 700,
+                  color: active ? d.color : '#94a3b8',
+                  transition: 'color 0.18s',
+                }}>
+                  {d.label}
+                </span>
+              </div>
+              <span style={{ fontSize: 11, color: active ? `${d.color}bb` : '#475569', lineHeight: 1.4, transition: 'color 0.18s' }}>
+                {d.desc}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <AnimatePresence>
+        {error && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ fontSize: 11, color: '#f43f5e', display: 'flex', alignItems: 'center', gap: 4, margin: 0 }}>
+            <AlertCircle size={10} /> {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function RegisterPage() {
   const router = useRouter();
@@ -120,12 +197,16 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [email, setEmail] = useState('');
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; age?: string; email?: string; password?: string; confirm?: string; global?: string }>({});
+  const [errors, setErrors] = useState<{
+    name?: string; age?: string; email?: string;
+    difficulty?: string; password?: string; confirm?: string; global?: string;
+  }>({});
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -140,6 +221,7 @@ export default function RegisterPage() {
     else if (isNaN(Number(age)) || Number(age) < 5 || Number(age) > 120) e.age = 'Enter a valid age';
     if (!email.trim()) e.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Enter a valid email';
+    if (!difficulty) e.difficulty = 'Please select a difficulty';
     if (!password) e.password = 'Password is required';
     else if (password.length < 6) e.password = 'Minimum 6 characters';
     if (!confirmPass) e.confirm = 'Please confirm your password';
@@ -157,7 +239,7 @@ export default function RegisterPage() {
       const { error, data } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: name.trim(), age: Number(age) } },
+        options: { data: { full_name: name.trim(), age: Number(age), difficulty } },
       });
       if (error) {
         setErrors({ global: error.message });
@@ -166,7 +248,7 @@ export default function RegisterPage() {
           const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ auth_id: data.user.id, full_name: name.trim(), age: Number(age) }),
+            body: JSON.stringify({ auth_id: data.user.id, full_name: name.trim(), age: Number(age), difficulty }),
           });
           if (res.ok) {
             const { sessionId } = await res.json();
@@ -195,7 +277,6 @@ export default function RegisterPage() {
     }}>
       <NeuralCanvas />
 
-      {/* Ambient blobs */}
       <div aria-hidden style={{ position: 'fixed', top: '10%', right: '8%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
       <div aria-hidden style={{ position: 'fixed', bottom: '10%', left: '6%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
 
@@ -205,41 +286,38 @@ export default function RegisterPage() {
         transition={{ duration: 0.45 }}
         style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 520, padding: '0 20px' }}
       >
-        {/* Card */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(10,22,40,0.98) 100%)',
           backdropFilter: 'blur(24px)',
           border: '1px solid rgba(148,163,184,0.12)',
           borderRadius: 22,
-          padding: '32px 40px',
+          padding: '28px 36px 30px',
           boxShadow: '0 8px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
         }}>
 
           {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 26 }}>
+          <div style={{ textAlign: 'center', marginBottom: 22 }}>
             <div style={{
-              width: 50, height: 50, borderRadius: 15,
+              width: 48, height: 48, borderRadius: 14,
               background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 14px',
+              margin: '0 auto 12px',
               boxShadow: '0 0 28px rgba(139,92,246,0.45)',
             }}>
-              <Brain size={25} color="white" />
+              <Brain size={24} color="white" />
             </div>
-            <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 24, fontWeight: 800, color: '#f1f5f9', marginBottom: 5, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 4, letterSpacing: '-0.02em' }}>
               Create your account
             </h1>
-            <p style={{ fontSize: 13, color: '#64748b' }}>
-              Join LlhamLearns and start your DSA journey
-            </p>
+            <p style={{ fontSize: 13, color: '#64748b' }}>Join LlhamLearns and start your DSA journey</p>
           </div>
 
           {/* Success */}
           <AnimatePresence>
             {success && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                style={{ padding: '11px 16px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Zap size={15} /> Account created! Redirecting…
+                style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Zap size={14} /> Account created! Redirecting…
               </motion.div>
             )}
           </AnimatePresence>
@@ -248,46 +326,28 @@ export default function RegisterPage() {
           <AnimatePresence>
             {errors.global && (
               <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: '11px 14px', borderRadius: 10, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', color: '#fb7185', fontSize: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <AlertCircle size={14} style={{ flexShrink: 0 }} />
-                {errors.global}
+                style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', color: '#fb7185', fontSize: 12, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle size={13} style={{ flexShrink: 0 }} /> {errors.global}
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Form */}
-          <form onSubmit={handleRegister} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form onSubmit={handleRegister} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
 
-            {/* Row 1: Name + Age side by side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
-              <InputField
-                id="reg-name" label="Full Name"
-                value={name} onChange={setName}
-                placeholder="Jane Smith"
-                icon={<User size={15} />}
-                error={errors.name}
-              />
-              <InputField
-                id="reg-age" label="Age"
-                type="number"
-                value={age} onChange={setAge}
-                placeholder="18"
-                icon={<Calendar size={15} />}
-                error={errors.age}
-              />
+            {/* Name + Age */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 12 }}>
+              <InputField id="reg-name" label="Full Name" value={name} onChange={setName} placeholder="Jane Smith" icon={<User size={15} />} error={errors.name} />
+              <InputField id="reg-age" label="Age" type="number" value={age} onChange={setAge} placeholder="18" icon={<Calendar size={15} />} error={errors.age} />
             </div>
 
-            {/* Row 2: Email full width */}
-            <InputField
-              id="reg-email" label="Email Address"
-              type="email"
-              value={email} onChange={setEmail}
-              placeholder="you@example.com"
-              icon={<Mail size={15} />}
-              error={errors.email}
-            />
+            {/* Email */}
+            <InputField id="reg-email" label="Email Address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon={<Mail size={15} />} error={errors.email} />
 
-            {/* Row 3: Password full width */}
+            {/* Difficulty */}
+            <DifficultySelector value={difficulty} onChange={setDifficulty} error={errors.difficulty} />
+
+            {/* Password */}
             <InputField
               id="reg-password" label="Password"
               type={showPass ? 'text' : 'password'}
@@ -302,7 +362,7 @@ export default function RegisterPage() {
               }
             />
 
-            {/* Row 4: Confirm Password full width — stacked below */}
+            {/* Confirm Password */}
             <InputField
               id="reg-confirm" label="Confirm Password"
               type={showConfirm ? 'text' : 'password'}
@@ -344,8 +404,8 @@ export default function RegisterPage() {
             </motion.button>
           </form>
 
-          {/* Divider + Sign in */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0 14px' }}>
+          {/* Footer */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 12px' }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)' }} />
             <span style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>Already have an account?</span>
             <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)' }} />
@@ -357,11 +417,9 @@ export default function RegisterPage() {
             border: '1px solid rgba(148,163,184,0.15)',
             background: 'rgba(255,255,255,0.03)',
             color: '#94a3b8', fontSize: 13, fontWeight: 600, textDecoration: 'none',
-            transition: 'all 0.2s',
           }}>
             Sign in instead
           </a>
-
         </div>
       </motion.div>
 

@@ -160,7 +160,7 @@ export default function LoginPage() {
           }
         }
         setSuccess(true);
-        setTimeout(() => router.push('/'), 1000);
+        setTimeout(() => router.push('/main-menu'), 1000);
       }
     } catch {
       setErrors({ global: 'Something went wrong. Please try again.' });
