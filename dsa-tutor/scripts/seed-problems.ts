@@ -530,7 +530,7 @@ const problems = [
     id: 'heaps-002',
     title: 'K Closest Points to Origin',
     topic: 'heaps',
-    distance: 'Medium',
+    difficulty: 'Medium',
     description: 'Given an array of points where points[i] = [x_i, y_i] and an integer k, return the k points closest to the origin (0, 0). Distance is calculated as sqrt(x² + y²). Return them in any order.',
     examples: [
       { input: 'points=[[1,3],[-2,2]], k=1', output: '[[-2,2]]', explanation: 'Distance of (1,3) is sqrt(10), (-2,2) is sqrt(8). Closer is (-2,2).' },
