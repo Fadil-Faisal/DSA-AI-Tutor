@@ -19,32 +19,31 @@ import { cn } from '@/lib/utils';
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 const DEMO_PROBLEM: Problem = {
-  id: 'arrays-001',
-  title: 'Two Sum',
+  id: 'python-001',
+  title: 'Hello World',
   topic: 'arrays',
   difficulty: 'Easy',
   description:
-    'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.',
+    'Write a Python program to print "Hello, World!" to the console.\n\nThis is your first step in Python programming!',
   examples: [
-    { input: '[2,7,11,15]\n9', output: '[0,1]', explanation: 'nums[0] + nums[1] = 2 + 7 = 9' },
-    { input: '[3,2,4]\n6', output: '[1,2]', explanation: 'nums[1] + nums[2] = 2 + 4 = 6' },
+    { input: '', output: 'Hello, World!', explanation: 'Using the print() function' },
   ],
   hints: [
-    'Think about what you need to find: two numbers that add up to target.',
-    'Can you use a dictionary/hashmap to store numbers you have already seen?',
-    'For each number x, check if (target - x) is already in your hashmap.',
+    'Use the print() function in Python',
+    'Put the text inside quotes: print("...")',
+    'The exact output should be: Hello, World!',
   ],
-  solution: '',
-  time_complexity: 'O(n)',
-  space_complexity: 'O(n)',
-  companies: ['Google', 'Amazon', 'Meta', 'Apple'],
+  solution: 'print("Hello, World!")',
+  time_complexity: 'O(1)',
+  space_complexity: 'O(1)',
+  companies: ['Google', 'Amazon', 'Meta'],
 };
 
 const STARTER_CODE: Record<ProgrammingLanguage, string> = {
-  python: 'import json\n\nline1 = input().strip()\nnums = json.loads(line1)\ntarget = int(input().strip())\n\ndef twoSum(nums, target):\n    pass\n\nprint(twoSum(nums, target))',
-  javascript: 'const readline = require("readline");\nconst rl = readline.createInterface({ input: process.stdin });\nconst inputs = [];\nrl.on("line", (line) => inputs.push(line));\nrl.on("close", () => {\n  const nums = JSON.parse(inputs[0]);\n  const target = parseInt(inputs[1]);\n  function twoSum(nums, target) { }\n  console.log(JSON.stringify(twoSum(nums, target)));\n});',
-  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String line = sc.nextLine();\n        String numsStr = line.replace("[","").replace("]","").trim();\n        int[] nums = Arrays.stream(numsStr.split(",")).map(String::trim).mapToInt(Integer::parseInt).toArray();\n        int target = sc.nextInt();\n    }\n}',
-  cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    stringstream ss(line.substr(1, line.size()-2));\n    vector<int> nums;\n    string num;\n    while (getline(ss, num, \',\')) nums.push_back(stoi(num));\n    int target; cin >> target;\n    return 0;\n}',
+  python: '# Write your first Python program!\nprint("Hello, World!")',
+  javascript: 'console.log("Hello, World!");',
+  java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}',
+  cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}',
 };
 
 const LANGUAGES: { value: ProgrammingLanguage; label: string }[] = [

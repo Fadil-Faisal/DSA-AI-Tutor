@@ -21,30 +21,38 @@ interface RoadmapNode {
 }
 
 const ROADMAP: RoadmapNode[] = [
-  // Section 1 — Arrays & Strings
-  { id: 1,  label: 'Arrays Basics',       icon: '📦', section: 'Section 1 · Arrays & Strings',  route: '/session', status: 'completed', xPct: 50 },
-  { id: 2,  label: 'Two Pointers',        icon: '👆', section: 'Section 1 · Arrays & Strings',  route: '/session', status: 'completed', xPct: 28 },
-  { id: 3,  label: 'Sliding Window',      icon: '🪟', section: 'Section 1 · Arrays & Strings',  route: '/session', status: 'active',    xPct: 68 },
-  { id: 4,  label: 'String Manip',        icon: '🔤', section: 'Section 1 · Arrays & Strings',  route: '/session', status: 'locked',    xPct: 35 },
-  // Section 2 — Linked Lists
-  { id: 5,  label: 'Linked Lists',        icon: '🔗', section: 'Section 2 · Linked Lists',       route: '/session', status: 'locked',    xPct: 60 },
-  { id: 6,  label: 'Fast & Slow',         icon: '🐢', section: 'Section 2 · Linked Lists',       route: '/session', status: 'locked',    xPct: 30 },
-  // Section 3 — Trees
-  { id: 7,  label: 'Binary Trees',        icon: '🌳', section: 'Section 3 · Trees & Graphs',     route: '/session', status: 'locked',    xPct: 65 },
-  { id: 8,  label: 'BST',                 icon: '🔍', section: 'Section 3 · Trees & Graphs',     route: '/session', status: 'locked',    xPct: 38 },
-  { id: 9,  label: 'Graph BFS/DFS',       icon: '🗺️', section: 'Section 3 · Trees & Graphs',     route: '/session', status: 'locked',    xPct: 58 },
-  // Section 4 — DP
-  { id: 10, label: 'Dynamic Prog.',       icon: '⚡', section: 'Section 4 · Dynamic Programming', route: '/session', status: 'locked',    xPct: 35 },
-  { id: 11, label: 'Knapsack',            icon: '🎒', section: 'Section 4 · Dynamic Programming', route: '/session', status: 'locked',    xPct: 62 },
-  { id: 12, label: 'Final Boss',          icon: '🏆', section: 'Section 4 · Dynamic Programming', route: '/session', status: 'locked',    xPct: 50 },
+  // Section 1 — Python Basics
+  { id: 1, label: 'Video Lesson',      icon: '🎥', section: 'Section 1 · Python Basics',       route: '/video-lesson', status: 'active',    xPct: 50 },
+  { id: 2, label: 'Memory Game',       icon: '🃏', section: 'Section 1 · Python Basics',       route: '/matching-game', status: 'locked',    xPct: 28 },
+  { id: 3, label: 'Data Types',      icon: '🔢', section: 'Section 1 · Python Basics',       route: '/session', status: 'locked',    xPct: 68 },
+  { id: 4, label: 'Control Flow',   icon: '🔀', section: 'Section 1 · Python Basics',       route: '/session', status: 'locked',    xPct: 35 },
+  // Section 2 — Arrays & Strings
+  { id: 5,  label: 'Arrays Basics',       icon: '📦', section: 'Section 2 · Arrays & Strings',  route: '/session', status: 'locked',    xPct: 60 },
+  { id: 6,  label: 'Two Pointers',        icon: '👆', section: 'Section 2 · Arrays & Strings',  route: '/session', status: 'locked',    xPct: 30 },
+  { id: 7,  label: 'Sliding Window',      icon: '🪟', section: 'Section 2 · Arrays & Strings',  route: '/session', status: 'locked',    xPct: 65 },
+  { id: 8,  label: 'String Manip',        icon: '🔤', section: 'Section 2 · Arrays & Strings',  route: '/session', status: 'locked',    xPct: 38 },
+  // Section 3 — Linked Lists
+  { id: 9,  label: 'Linked Lists',        icon: '🔗', section: 'Section 3 · Linked Lists',       route: '/session', status: 'locked',    xPct: 55 },
+  { id: 10, label: 'Fast & Slow',         icon: '🐢', section: 'Section 3 · Linked Lists',       route: '/session', status: 'locked',    xPct: 35 },
+  // Section 4 — Trees
+  { id: 11, label: 'Binary Trees',        icon: '🌳', section: 'Section 4 · Trees & Graphs',     route: '/session', status: 'locked',    xPct: 60 },
+  { id: 12, label: 'BST',                 icon: '🔍', section: 'Section 4 · Trees & Graphs',     route: '/session', status: 'locked',    xPct: 30 },
+  // Section 5 — Graphs
+  { id: 13, label: 'Graph BFS/DFS',       icon: '🗺️', section: 'Section 5 · Graphs',          route: '/session', status: 'locked',    xPct: 50 },
+  // Section 6 — DP
+  { id: 14, label: 'Dynamic Prog.',       icon: '⚡', section: 'Section 6 · Dynamic Programming', route: '/session', status: 'locked',    xPct: 35 },
+  { id: 15, label: 'Knapsack',            icon: '🎒', section: 'Section 6 · Dynamic Programming', route: '/session', status: 'locked',    xPct: 62 },
+  { id: 16, label: 'Final Boss',          icon: '🏆', section: 'Section 6 · Dynamic Programming', route: '/session', status: 'locked',    xPct: 50 },
 ];
 
 // Section dividers — inserted before nodes with these IDs
 const SECTION_BEFORE: Record<number, string> = {
-  1:  'Section 1, Unit 1 · Arrays & Strings',
-  5:  'Section 2, Unit 5 · Linked Lists',
-  7:  'Section 3, Unit 7 · Trees & Graphs',
-  10: 'Section 4, Unit 10 · Dynamic Programming',
+  1:  'Section 1, Unit 1 · Python Basics',
+  5:  'Section 2, Unit 5 · Arrays & Strings',
+  9:  'Section 3, Unit 9 · Linked Lists',
+  11: 'Section 4, Unit 11 · Trees & Graphs',
+  13: 'Section 5, Unit 13 · Graphs',
+  14: 'Section 6, Unit 14 · Dynamic Programming',
 };
 
 // ── Node colours by status ──────────────────────────────────────────────────
@@ -210,6 +218,25 @@ export default function RoadmapPage() {
     ? (user.user_metadata?.full_name as string | undefined) || user.email?.split('@')[0] || 'Learner'
     : storedName || 'Learner';
 
+  const [nodes, setNodes] = useState(ROADMAP);
+
+  useEffect(() => {
+    // Dynamic unlocking logic
+    setNodes(prev => prev.map(n => {
+      if (n.id === 1 && localStorage.getItem('completed_lesson_1') === 'true') {
+        return { ...n, status: 'completed' };
+      }
+      if (n.id === 2 && localStorage.getItem('completed_lesson_1') === 'true') {
+        // Unlock node 2 only if 1 is done
+        return { ...n, status: localStorage.getItem('completed_game_1') === 'true' ? 'completed' : 'active' };
+      }
+      if (n.id === 3 && localStorage.getItem('completed_game_1') === 'true') {
+        return { ...n, status: 'active' };
+      }
+      return n;
+    }));
+  }, []);
+
   const handleNavigate = (route: string, status: RoadmapNode['status']) => {
     if (status === 'locked') return;
     router.push(route);
@@ -217,7 +244,7 @@ export default function RoadmapPage() {
 
   // Group nodes so we can insert section banners
   const sections: string[] = [];
-  ROADMAP.forEach(n => { if (!sections.includes(n.section)) sections.push(n.section); });
+  nodes.forEach(n => { if (!sections.includes(n.section)) sections.push(n.section); });
 
   return (
     <div style={{
@@ -288,7 +315,7 @@ export default function RoadmapPage() {
         display: 'flex', flexDirection: 'column', gap: 20,
       }}>
         {sections.map((section) => {
-          const sectionNodes = ROADMAP.filter(n => n.section === section);
+          const sectionNodes = nodes.filter(n => n.section === section);
           const sectionBannerLabel = SECTION_BEFORE[sectionNodes[0].id] ?? section;
           return (
             <div key={section} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -297,7 +324,7 @@ export default function RoadmapPage() {
                 <RoadNode
                   key={node.id}
                   node={node}
-                  index={ROADMAP.indexOf(node)}
+                  index={nodes.indexOf(node)}
                   onNavigate={handleNavigate}
                 />
               ))}
