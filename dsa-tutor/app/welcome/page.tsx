@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
-export default function Home() {
+export default function WelcomePage() {
   const router = useRouter();
   const [name, setName] = useState('');
 
@@ -13,7 +13,6 @@ export default function Home() {
       const token = btoa(JSON.stringify({ name: name, timestamp: Date.now() }));
       localStorage.setItem('jwt_token', token);
       localStorage.setItem('user_name', name);
-      localStorage.setItem('level_4_unlocked', 'true');
       router.push('/roadmap');
     }
   };
