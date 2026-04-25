@@ -26,8 +26,8 @@ const DEMO_PROBLEM: Problem = {
   description:
     'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.',
   examples: [
-    { input: 'nums = [2,7,11,15], target = 9', output: '[0,1]', explanation: 'nums[0] + nums[1] = 2 + 7 = 9' },
-    { input: 'nums = [3,2,4], target = 6', output: '[1,2]', explanation: 'nums[1] + nums[2] = 2 + 4 = 6' },
+    { input: '[2,7,11,15]\n9', output: '[0,1]', explanation: 'nums[0] + nums[1] = 2 + 7 = 9' },
+    { input: '[3,2,4]\n6', output: '[1,2]', explanation: 'nums[1] + nums[2] = 2 + 4 = 6' },
   ],
   hints: [
     'Think about what you need to find: two numbers that add up to target.',
@@ -41,10 +41,10 @@ const DEMO_PROBLEM: Problem = {
 };
 
 const STARTER_CODE: Record<ProgrammingLanguage, string> = {
-  python: '# Write your solution here\ndef twoSum(nums, target):\n    pass\n',
-  javascript: '// Write your solution here\nfunction twoSum(nums, target) {\n    \n}\n',
-  java: 'class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        return new int[]{};\n    }\n}\n',
-  cpp: '#include <vector>\nusing namespace std;\n\nclass Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        return {};\n    }\n};\n',
+  python: 'import json\n\nline1 = input().strip()\nnums = json.loads(line1)\ntarget = int(input().strip())\n\ndef twoSum(nums, target):\n    pass\n\nprint(twoSum(nums, target))',
+  javascript: 'const readline = require("readline");\nconst rl = readline.createInterface({ input: process.stdin });\nconst inputs = [];\nrl.on("line", (line) => inputs.push(line));\nrl.on("close", () => {\n  const nums = JSON.parse(inputs[0]);\n  const target = parseInt(inputs[1]);\n  function twoSum(nums, target) { }\n  console.log(JSON.stringify(twoSum(nums, target)));\n});',
+  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String line = sc.nextLine();\n        String numsStr = line.replace("[","").replace("]","").trim();\n        int[] nums = Arrays.stream(numsStr.split(",")).map(String::trim).mapToInt(Integer::parseInt).toArray();\n        int target = sc.nextInt();\n    }\n}',
+  cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    stringstream ss(line.substr(1, line.size()-2));\n    vector<int> nums;\n    string num;\n    while (getline(ss, num, \',\')) nums.push_back(stoi(num));\n    int target; cin >> target;\n    return 0;\n}',
 };
 
 const LANGUAGES: { value: ProgrammingLanguage; label: string }[] = [
@@ -149,7 +149,6 @@ export default function SessionPage() {
     currentHintLevel, incrementHintLevel,
     timerSeconds, timerStarted,
     startTimer, tickTimer, resetTimer,
-    incrementStreak, resetStreak, incrementAttempts,
     currentStreak, setDecisionType,
   } = useLearnerStore();
 
@@ -191,57 +190,121 @@ export default function SessionPage() {
   }, [timerStarted, startTimer, language]);
 
   const handleRun = useCallback(async () => {
+    if (!currentProblem) return;
     setOutputLoading(true);
     setFeedback('');
     setCorrect(null);
-    await new Promise((r) => setTimeout(r, 1200));
-    setResults([
-      { passed: true, stdout: '[0,1]', stderr: null, compile_output: null, time: '0.04', status: 'Accepted' },
-      { passed: false, stdout: '[1,2]', stderr: null, compile_output: null, time: '0.03', status: 'Wrong Answer' },
-    ]);
+    setResults([]);
+
+    try {
+      const testCases = currentProblem.examples.map((ex) => ({
+        input: ex.input || '',
+        expectedOutput: ex.output || '',
+      }));
+
+      const res = await fetch('/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language, testCases }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFeedback(data.error || 'Execution failed');
+        setResults([]);
+      } else {
+        setResults(data.results || []);
+        if (data.summary && !data.summary.allPassed) {
+          setCorrect(false);
+        }
+      }
+    } catch {
+      setFeedback('Failed to connect to execution service.');
+    }
+
     setOutputLoading(false);
-  }, []);
+  }, [code, language, currentProblem]);
 
   const handleSubmit = useCallback(async () => {
     if (!currentProblem) return;
     setOutputLoading(true);
     setFeedback('');
     setCorrect(null);
-    incrementAttempts();
-    await new Promise((r) => setTimeout(r, 1400));
-    const isCorrect = code.includes('seen') || code.includes('{}') || code.includes('map') || code.includes('dict');
-    setCorrect(isCorrect);
-    setFeedback(isCorrect
-      ? '✅ Correct! Great use of the hash-map approach. Time complexity O(n), space O(n).'
-      : '❌ Not quite. Consider using a hash map to store values as you iterate for O(n) lookup.');
-    setResults([{
-      passed: isCorrect,
-      stdout: isCorrect ? '[0,1]' : null,
-      stderr: isCorrect ? null : 'Wrong answer on test case 1',
-      compile_output: null, time: '0.04',
-      status: isCorrect ? 'Accepted' : 'Wrong Answer',
-    }]);
-    setOutputLoading(false);
-    if (isCorrect) {
-      incrementStreak();
-      resetTimer();
-      setTimeout(() => {
-        setAgentLoading(true);
-        setTimeout(() => {
-          setCurrentProblem({ ...DEMO_PROBLEM, id: 'arrays-002', title: 'Best Time to Buy & Sell Stock', difficulty: 'Easy' });
-          setAgentReasoning('You nailed Two Sum! Moving to sliding window — "Best Time to Buy & Sell Stock" continues the array mastery path.');
-          setDecisionType('next_problem');
-          setAgentLoading(false);
-          setFeedback('');
-          setCorrect(null);
-          setResults([]);
-          setCode(STARTER_CODE[language]);
-        }, 2000);
-      }, 2000);
-    } else {
-      resetStreak();
+
+    const store = useLearnerStore.getState();
+    store.incrementAttempts();
+
+    try {
+      const res = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: store.sessionId,
+          problemId: currentProblem.id,
+          code,
+          language,
+          explanationMode: store.explanationMode,
+          timeTaken: store.timerSeconds,
+          attemptsCount: store.attemptsOnCurrentProblem,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFeedback(data.error || 'Execution failed');
+        setResults([]);
+        setCorrect(false);
+      } else {
+        setResults(data.results || []);
+        setCorrect(data.correct ?? false);
+
+        if (data.feedback) {
+          setFeedback(data.feedback);
+        }
+
+        if (data.correct) {
+          useLearnerStore.getState().incrementStreak();
+          useLearnerStore.getState().addSolvedProblem({
+            problemId: currentProblem.id,
+            topic: currentProblem.topic as any,
+            correct: true,
+            timeTaken: store.timerSeconds,
+            timestamp: Date.now(),
+          });
+          setTimeout(() => {
+            setAgentLoading(true);
+            setTimeout(() => {
+              setCurrentProblem({ ...DEMO_PROBLEM, id: 'arrays-002', title: 'Best Time to Buy & Sell Stock', difficulty: 'Easy' });
+              setAgentReasoning('You nailed Two Sum! Moving to sliding window — "Best Time to Buy & Sell Stock" continues the array mastery path.');
+              setDecisionType('next_problem');
+              setAgentLoading(false);
+              setFeedback('');
+              setCorrect(null);
+              setResults([]);
+              setCode(STARTER_CODE[language]);
+              resetTimer();
+            }, 2000);
+          }, 2000);
+        } else {
+          useLearnerStore.getState().resetStreak();
+          useLearnerStore.getState().addSolvedProblem({
+            problemId: currentProblem.id,
+            topic: currentProblem.topic as any,
+            correct: false,
+            timeTaken: store.timerSeconds,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    } catch {
+      setFeedback('Failed to connect to execution service.');
+      setCorrect(false);
     }
-  }, [currentProblem, code, language, incrementAttempts, incrementStreak, resetStreak, resetTimer, setAgentLoading, setAgentReasoning, setCurrentProblem, setDecisionType]);
+
+    setOutputLoading(false);
+  }, [currentProblem, code, language, resetTimer, setAgentLoading, setAgentReasoning, setCurrentProblem, setDecisionType]);
 
   const handleReset = useCallback(() => {
     setCode(STARTER_CODE[language]);

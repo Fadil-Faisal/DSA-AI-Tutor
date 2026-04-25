@@ -78,6 +78,8 @@ function HintCard({ level, text, visible }: HintCardProps) {
 }
 
 export function HintSection({
+  problemId,
+  sessionId,
   currentHintLevel,
   onHintRequest,
   explanationMode,
@@ -89,11 +91,31 @@ export function HintSection({
   const handleGetHint = useCallback(async () => {
     if (currentHintLevel >= 3) return;
     setLoading(true);
-    onHintRequest(); // increments level in store
-    // Simulate loading (real API call handled by parent)
-    await new Promise((r) => setTimeout(r, 600));
+    const nextLevel = currentHintLevel + 1;
+
+    try {
+      const res = await fetch('/api/hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          problemId,
+          hintLevel: nextLevel,
+          explanationMode,
+          currentCode: null,
+          mistakePattern: null,
+        }),
+      });
+      const data = await res.json();
+      if (data.hint) {
+        setHints((prev) => [...prev, { level: nextLevel, text: data.hint }]);
+      }
+    } catch {
+    }
+
+    onHintRequest();
     setLoading(false);
-  }, [currentHintLevel, onHintRequest]);
+  }, [currentHintLevel, onHintRequest, sessionId, problemId, explanationMode]);
 
   const nextLevel = (currentHintLevel + 1) as 1 | 2 | 3;
   const nextMeta = currentHintLevel < 3 ? HINT_META[Math.min(currentHintLevel, 2) as 0 | 1 | 2] : null;
@@ -151,11 +173,11 @@ export function HintSection({
 
               {/* Revealed Hints */}
               <AnimatePresence>
-                {Array.from({ length: currentHintLevel }, (_, i) => (
+                {hints.map((h) => (
                   <HintCard
-                    key={i + 1}
-                    level={(i + 1) as 1 | 2 | 3}
-                    text={`Hint ${i + 1} content — fetched from API in real integration`}
+                    key={h.level}
+                    level={h.level as 1 | 2 | 3}
+                    text={h.text}
                     visible
                   />
                 ))}

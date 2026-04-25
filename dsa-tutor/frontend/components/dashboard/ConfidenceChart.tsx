@@ -7,17 +7,28 @@ import {
 import { getConfidenceColor, topicLabel } from '@/lib/utils';
 import { Confidence, DSATopic } from '@/types/learner';
 
-// Generate mock history for demo
-function buildHistory(confidence: Confidence) {
-  const topics = Object.keys(confidence) as DSATopic[];
-  const points = 8;
-  return Array.from({ length: points }, (_, i) => {
-    const entry: Record<string, number | string> = { session: `S${i + 1}` };
+// Generate session history from real solved problems data
+function buildHistory(confidence: Confidence, solvedProblems: Array<{ timestamp: number; topic: DSATopic; correct: boolean }>) {
+  if (solvedProblems.length === 0) return [];
+  const sorted = [...solvedProblems].sort((a, b) => a.timestamp - b.timestamp);
+
+  const bucketSize = Math.max(1, Math.floor(sorted.length / 6));
+  const buckets: Record<string, Record<DSATopic, number[]>> = {};
+
+  sorted.forEach((p) => {
+    const bucketIdx = Math.floor(sorted.indexOf(p) / bucketSize);
+    const bucketKey = `S${bucketIdx + 1}`;
+    if (!buckets[bucketKey]) buckets[bucketKey] = {} as Record<DSATopic, number[]>;
+    if (!buckets[bucketKey][p.topic]) buckets[bucketKey][p.topic] = [];
+    buckets[bucketKey][p.topic].push(p.correct ? 1 : 0.3);
+  });
+
+  return Object.entries(buckets).map(([session, topicVals]) => {
+    const entry: Record<string, number | string> = { session };
+    const topics = Object.keys(confidence) as DSATopic[];
     topics.forEach((t) => {
-      const base = confidence[t];
-      const noise = (Math.random() - 0.5) * 0.15;
-      const progress = (i / points) * (base - 0.3);
-      entry[t] = Math.max(0.1, Math.min(1, 0.3 + progress + noise));
+      const vals = topicVals[t] || [];
+      entry[t] = vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : confidence[t];
     });
     return entry;
   });
@@ -25,10 +36,11 @@ function buildHistory(confidence: Confidence) {
 
 interface ConfidenceChartProps {
   confidence: Confidence;
+  solvedProblems?: Array<{ timestamp: number; topic: string; confidence: number; correct: boolean }>;
 }
 
-export function ConfidenceChart({ confidence }: ConfidenceChartProps) {
-  const data = buildHistory(confidence);
+export function ConfidenceChart({ confidence, solvedProblems = [] }: ConfidenceChartProps) {
+  const data = buildHistory(confidence, solvedProblems);
   const topics = Object.keys(confidence) as DSATopic[];
 
   return (

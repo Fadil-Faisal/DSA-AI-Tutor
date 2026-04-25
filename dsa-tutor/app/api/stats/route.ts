@@ -87,6 +87,7 @@ export async function GET(req: NextRequest) {
         targetCompany: profile.target_company,
         explanationMode: profile.explanation_mode,
       },
+      attempts: attempts || [],
     });
 
   } catch (error: unknown) {

@@ -20,13 +20,6 @@ export function StreakHeatmap({ solvedProblems, currentStreak }: StreakHeatmapPr
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       map[key] = (map[key] ?? 0) + 1;
     });
-    // Seed some demo activity
-    for (let i = 0; i < 40; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - Math.floor(Math.random() * weeks * 7));
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      map[key] = (map[key] ?? 0) + Math.ceil(Math.random() * 3);
-    }
     return map;
   }, [solvedProblems]);
 

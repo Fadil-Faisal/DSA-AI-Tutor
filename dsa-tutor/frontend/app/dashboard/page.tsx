@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Brain, BarChart3, Flame, Target, ArrowLeft, PlayCircle, Trophy, TrendingUp } from 'lucide-react';
+import { Brain, BarChart3, Flame, Target, ArrowLeft, PlayCircle, Trophy, TrendingUp, Loader2 } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { KnowledgeGraph } from '@/components/dashboard/KnowledgeGraph';
 import { ConfidenceChart } from '@/components/dashboard/ConfidenceChart';
@@ -49,7 +49,32 @@ function StatCard({ label, value, icon, color, sub }: StatCardProps) {
 }
 
 export default function DashboardPage() {
-  const { confidence, currentStreak, totalProblemsAttempted, solvedProblems, explanationMode } = useLearnerStore();
+  const { confidence, currentStreak, totalProblemsAttempted, solvedProblems, explanationMode, sessionId } = useLearnerStore();
+  const [loading, setLoading] = useState(true);
+  const [totalTime, setTotalTime] = useState(0);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`/api/stats?sessionId=${sessionId}`);
+        const data = await res.json();
+        if (data.stats) {
+          useLearnerStore.getState().setConfidenceFromQuiz(data.stats.confidenceScores || {});
+        }
+        if (data.attempts) {
+          const total = (data.attempts as Array<{ time_taken_seconds?: number }>)
+            .reduce((s, a) => s + (a.time_taken_seconds || 0), 0);
+          setTotalTime(total);
+        }
+      } catch (err) {
+        console.error('Failed to fetch stats', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, [sessionId]);
 
   const weakTopics = useMemo(() =>
     (Object.entries(confidence) as [DSATopic, number][])
@@ -60,6 +85,11 @@ export default function DashboardPage() {
   const correctCount = solvedProblems.filter((p) => p.correct).length;
   const accuracy = totalProblemsAttempted > 0 ? Math.round((correctCount / totalProblemsAttempted) * 100) : 0;
   const avgConfidence = Math.round((Object.values(confidence).reduce((s, v) => s + v, 0) / 10) * 100);
+
+  const formatTime = (secs: number) => {
+    if (secs < 60) return `${secs}s`;
+    return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+  };
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg-void)', paddingBottom: 64 }}>
@@ -100,8 +130,16 @@ export default function DashboardPage() {
           <StatCard label="Problems Solved" value={correctCount} icon={<Target size={16} />} color="#3b82f6" sub={`${totalProblemsAttempted} attempted`} />
           <StatCard label="Accuracy" value={`${accuracy}%`} icon={<Trophy size={16} />} color="#10b981" sub="all time" />
           <StatCard label="Streak" value={currentStreak} icon={<Flame size={16} />} color="#f97316" sub="problems in a row" />
+          <StatCard label="Total Time" value={formatTime(totalTime)} icon={<TrendingUp size={16} />} color="#eab308" sub="all attempts" />
           <StatCard label="Avg Confidence" value={`${avgConfidence}%`} icon={<BarChart3 size={16} />} color="#8b5cf6" sub="across 10 topics" />
         </motion.div>
+
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+            <Loader2 size={24} className="animate-spin text-slate-500" />
+            <span style={{ marginLeft: 12, color: '#475569' }}>Loading stats...</span>
+          </div>
+        )}
 
         {/* Knowledge Graph */}
         <motion.section {...fadeUp(0.05)} style={{ marginBottom: 40 }}>
@@ -124,7 +162,7 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 20 }}>
               Confidence Over Sessions
             </h3>
-            <ConfidenceChart confidence={confidence} />
+            <ConfidenceChart confidence={confidence} solvedProblems={solvedProblems} />
           </div>
 
           {/* Weak areas */}
