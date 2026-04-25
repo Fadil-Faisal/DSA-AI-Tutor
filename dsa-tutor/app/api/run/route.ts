@@ -76,12 +76,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No test cases found for problem' }, { status: 400 });
     }
 
-    const testCases: TestCase[] = examples.map((ex: any) => ({
+    const testCases: Array<{ input: string; expected: string }> = examples.map((ex: { input?: string; output?: string }) => ({
       input: ex.input || '',
       expected: ex.output || '',
     }));
 
-    const results: any[] = [];
+    const results: Array<{ input: string; expected: string; actual: string; passed: boolean; time?: string; memory?: number; status?: string; error?: string }> = [];
     let allPassed = true;
 
     for (const testCase of testCases) {
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
         JSON.stringify({ feedback: 'Congratulations! You solved it!' })
       );
 
-      let feedbackJson: any;
+      let feedbackJson: { feedback: string; hint?: string };
       try {
         feedbackJson = JSON.parse(feedbackRaw);
       } catch {
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
       JSON.stringify({ feedback: 'Some tests failed. Check your logic.', hint: 'Review the failed test case.' })
     );
 
-    let evalJson: any;
+    let evalJson: { feedback: string; hint: string };
     try {
       evalJson = JSON.parse(evalRaw);
     } catch {
@@ -239,8 +239,8 @@ export async function POST(req: NextRequest) {
       ai_source: source,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/run] Error:', error);
-    return NextResponse.json({ error: 'Execution failed', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Execution failed', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

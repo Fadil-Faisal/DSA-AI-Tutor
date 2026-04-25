@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       members,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/rooms/join POST] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

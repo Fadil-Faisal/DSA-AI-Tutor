@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/stats] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

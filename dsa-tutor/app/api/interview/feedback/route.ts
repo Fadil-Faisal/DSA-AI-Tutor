@@ -10,7 +10,7 @@ import { getModePersona } from '@/lib/agent/prompts';
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, explanationMode, problems, totalTime } = await req.json();
+    const { explanationMode, problems, totalTime } = await req.json();
 
     if (!explanationMode || !problems || !Array.isArray(problems)) {
       return NextResponse.json({ error: 'Missing required fields: explanationMode, problems[]' }, { status: 400 });
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[/api/interview/feedback] AI source: ${source}`);
 
-    let report: any;
+    let report: Record<string, unknown>;
     try {
       report = JSON.parse(aiRaw);
     } catch {
@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ...report, ai_source: source });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/interview/feedback] Error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

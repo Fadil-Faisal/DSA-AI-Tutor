@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       roomId,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/agent/multiplayer] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

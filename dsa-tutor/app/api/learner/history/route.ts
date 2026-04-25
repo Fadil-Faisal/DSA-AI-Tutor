@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ attempts, topicStats });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[GET /api/learner/history] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

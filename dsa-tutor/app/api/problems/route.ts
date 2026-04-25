@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ problems });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/problems GET] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

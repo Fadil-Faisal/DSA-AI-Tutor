@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[/api/hint] AI source: ${source}`);
 
-    let parsed: any;
+    let parsed: { hint: string };
     try {
       parsed = JSON.parse(aiRaw);
     } catch {
@@ -108,8 +108,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ hint: parsed.hint, source: `ai_${source}` });
 
-  } catch (error: any) {
-    console.error('[/api/hint] Unhandled error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+} catch (error: unknown) {
+    console.error('[/api/hint] Error:', error);
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

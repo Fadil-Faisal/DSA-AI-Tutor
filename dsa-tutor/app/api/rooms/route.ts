@@ -9,6 +9,14 @@ function generateRoomCode(): string {
   ).join('');
 }
 
+interface RoomData {
+  id: string;
+  room_code: string;
+  mode: string;
+  status: string;
+  current_problem_id: string | null;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const roomCode = req.nextUrl.searchParams.get('roomCode');
@@ -39,8 +47,7 @@ export async function GET(req: NextRequest) {
       currentProblemId: room.current_problem_id,
       members: members || [],
     });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/rooms GET] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -61,16 +68,16 @@ export async function POST(req: NextRequest) {
 
     let roomCode = generateRoomCode();
     let retries = 0;
-    let room: any;
+    let room: RoomData | null = null;
 
     while (retries < 5) {
-      const existing = await supabaseServer
+      const { data: existing } = await supabaseServer
         .from('rooms')
         .select('id')
         .eq('room_code', roomCode)
         .single();
 
-      if (!existing.data) {
+      if (!existing) {
         const { data, error } = await supabaseServer
           .from('rooms')
           .insert({ room_code: roomCode, mode, status: 'waiting', current_problem_id: null })
@@ -80,14 +87,14 @@ export async function POST(req: NextRequest) {
         if (error) {
           return NextResponse.json({ error: 'Failed to create room' }, { status: 500 });
         }
-        room = data;
+        room = data as RoomData;
         break;
       }
       roomCode = generateRoomCode();
       retries++;
     }
 
-    if (retries >= 5) {
+    if (retries >= 5 || !room) {
       return NextResponse.json({ error: 'Failed to generate unique room code' }, { status: 500 });
     }
 
@@ -106,7 +113,7 @@ export async function POST(req: NextRequest) {
       status: room.status,
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/rooms POST] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -172,7 +179,7 @@ export async function PATCH(req: NextRequest) {
       currentProblemId: room.current_problem_id,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/rooms PATCH] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -208,7 +215,7 @@ export async function PUT(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[/api/rooms PUT] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
