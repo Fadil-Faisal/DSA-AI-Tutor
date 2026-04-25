@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     `;
 
     const { result: question, source } = await withFallback(
-      () => ollamaChat([{ role: 'user', content: prompt }]),
+      () => ollamaChat(prompt),
       async () => {
         const completion = await groq.chat.completions.create({
           model: GROQ_STRONG,

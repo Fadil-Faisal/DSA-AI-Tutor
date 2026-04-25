@@ -11,412 +11,622 @@ const problems = [
 
   // ─── ARRAYS ───────────────────────────────────────────────
   {
-    id: 'arrays-001', title: 'Two Sum', topic: 'arrays', difficulty: 'Easy',
-    description: 'Given an array of integers nums and a target integer, return the indices of the two numbers that add up to target. Each input has exactly one solution. You may not use the same element twice.',
-    examples: [{ input: 'nums=[2,7,11,15], target=9', output: '[0,1]', explanation: 'nums[0]+nums[1]=2+7=9' }],
-    hints: [
-      'Think about what number you need to find to pair with each element.',
-      'A dictionary/hashmap lets you check in O(1) if a number exists. Store each number as you visit it.',
-      'For each number x, check if (target - x) is already in your hashmap. If yes, return both indices.'
+    id: 'arrays-001',
+    title: 'Two Sum',
+    topic: 'arrays',
+    difficulty: 'Easy',
+    description: 'Given an array of integers nums and an integer target, return the indices of the two numbers that add up to target. Each input has exactly one solution. You may not use the same element twice.',
+    examples: [
+      { input: 'nums=[2,7,11,15], target=9', output: '[0,1]', explanation: 'nums[0]+nums[1]=2+7=9, which equals the target.' },
+      { input: 'nums=[3,2,4], target=6', output: '[1,2]', explanation: 'nums[1]+nums[2]=2+4=6.' }
     ],
-    solution: 'def twoSum(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        if target - x in seen:\n            return [seen[target - x], i]\n        seen[x] = i',
-    time_complexity: 'O(n)', space_complexity: 'O(n)',
-    companies: ['Google', 'Amazon', 'Meta']
+    hints: [
+      'For each element x, consider what number you would need to pair with it to reach the target.',
+      'A hash map lets you store each number you have seen so far and check if its complement exists in O(1) time.',
+      'Iterate through the array. For each x, check if (target - x) is in your hash map. If found, return both indices.'
+    ],
+    solution: 'def twoSum(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        complement = target - x\n        if complement in seen:\n            return [seen[complement], i]\n        seen[x] = i\n    return []',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(n)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
   {
-    id: 'arrays-002', title: 'Best Time to Buy and Sell Stock', topic: 'arrays', difficulty: 'Medium',
-    description: 'Given an array prices where prices[i] is the price of a stock on day i, return the maximum profit you can achieve from one transaction. If no profit is possible, return 0.',
-    examples: [{ input: 'prices=[7,1,5,3,6,4]', output: '5', explanation: 'Buy at 1, sell at 6' }],
-    hints: [
-      'You need to find the best day to buy and the best day to sell after buying.',
-      'Track the minimum price seen so far as you scan left to right.',
-      'At each day, profit = current price - min price so far. Track the max of these profits.'
+    id: 'arrays-002',
+    title: 'Maximum Subarray',
+    topic: 'arrays',
+    difficulty: 'Medium',
+    description: 'Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum. The array may contain negative numbers.',
+    examples: [
+      { input: 'nums=[-2,1,-3,4,-1,2,1,-5,4]', output: '6', explanation: 'The subarray [4,-1,2,1] has the largest sum of 6.' },
+      { input: 'nums=[1]', output: '1', explanation: 'The subarray [1] is the only choice and has sum 1.' }
     ],
-    solution: 'def maxProfit(prices):\n    min_p, max_p = float("inf"), 0\n    for p in prices:\n        min_p = min(min_p, p)\n        max_p = max(max_p, p - min_p)\n    return max_p',
-    time_complexity: 'O(n)', space_complexity: 'O(1)',
-    companies: ['Amazon', 'Bloomberg']
-  },
-  {
-    id: 'arrays-003', title: 'Maximum Subarray (Kadane)', topic: 'arrays', difficulty: 'Hard',
-    description: 'Given an integer array nums, find the contiguous subarray with the largest sum and return its sum.',
-    examples: [{ input: 'nums=[-2,1,-3,4,-1,2,1,-5,4]', output: '6', explanation: 'Subarray [4,-1,2,1] has sum 6' }],
     hints: [
-      'Think about building the best subarray one element at a time from left to right.',
-      "At each position, decide: extend the previous subarray or start fresh? Start fresh if the previous sum is negative.",
-      'current = max(num, current + num). Track the global max across all positions. This is Kadane\'s algorithm.'
+      'As you iterate through the array, think about whether to extend the current subarray or start a fresh one.',
+      'Kadane\'s algorithm: at each position, decide whether to take the previous sum plus the current element, or start fresh from the current element.',
+      'Track current_sum = max(num, current_sum + num) and best_sum = max(best_sum, current_sum). Return best_sum.'
     ],
     solution: 'def maxSubArray(nums):\n    cur = best = nums[0]\n    for n in nums[1:]:\n        cur = max(n, cur + n)\n        best = max(best, cur)\n    return best',
-    time_complexity: 'O(n)', space_complexity: 'O(1)',
-    companies: ['Google', 'Microsoft', 'Apple']
+    time_complexity: 'O(n)',
+    space_complexity: 'O(1)',
+    companies: ['Amazon', 'Google', 'Apple', 'Microsoft']
+  },
+  {
+    id: 'arrays-003',
+    title: 'Trapping Rain Water',
+    topic: 'arrays',
+    difficulty: 'Hard',
+    description: 'Given an array of non-negative integers height where each element represents the height of a bar in a 1-unit wide grid, compute how much water can be trapped after raining. Water trapped at each index equals min(max_left, max_right) - height[i]. Use O(1) extra space.',
+    examples: [
+      { input: 'height=[0,1,0,2,1,0,1,3,2,1,2,1]', output: '6', explanation: 'The cross-section shows 6 units of water can be trapped between the bars.' },
+      { input: 'height=[4,2,0,3,2,5]', output: '9', explanation: 'Water is trapped between heights 4 and 3, and 3 and 5.' }
+    ],
+    hints: [
+      'Think about the water level at each position — it is bounded by the minimum of the highest bar on both sides, minus the bar height.',
+      'Two-pointer approach: track max from left and right simultaneously, processing from the side with the smaller max.',
+      'Use two pointers left and right. If height[left] < height[right], then water is limited by max_left. Move pointers inward, updating maxes.'
+    ],
+    solution: 'def trap(height):\n    if not height: return 0\n    left, right = 0, len(height) - 1\n    max_left = max_right = 0\n    water = 0\n    while left < right:\n        if height[left] < height[right]:\n            if height[left] >= max_left:\n                max_left = height[left]\n            else:\n                water += max_left - height[left]\n            left += 1\n        else:\n            if height[right] >= max_right:\n                max_right = height[right]\n            else:\n                water += max_right - height[right]\n            right -= 1\n    return water',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(1)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
 
-  // ─── TREES ────────────────────────────────────────────────
+  // ─── TREES ───────────────────────────────────────────────
   {
-    id: 'trees-001', title: 'Maximum Depth of Binary Tree', topic: 'trees', difficulty: 'Easy',
-    description: 'Given the root of a binary tree, return its maximum depth — the number of nodes along the longest path from the root down to the farthest leaf node.',
-    examples: [{ input: 'root=[3,9,20,null,null,15,7]', output: '3' }],
-    hints: [
-      'Think of the tree depth as: 1 (for this node) + the depth of the deeper child.',
-      'Recursion fits perfectly here. The depth of a node is 1 + max(depth of left, depth of right).',
-      'Base case: if node is None, return 0. Recursive case: return 1 + max(maxDepth(left), maxDepth(right)).'
+    id: 'trees-001',
+    title: 'Maximum Depth of Binary Tree',
+    topic: 'trees',
+    difficulty: 'Easy',
+    description: 'Given the root of a binary tree represented as nested lists (LeetCode format), return its maximum depth. A binary tree\'s maximum depth is the number of nodes along the longest path from the root down to the farthest leaf node.',
+    examples: [
+      { input: 'root=[3,9,20,null,null,15,7]', output: '3', explanation: 'The longest path is 3 → 20 → 15 (or 3 → 20 → 7), with 3 nodes.' },
+      { input: 'root=[1,null,2]', output: '2', explanation: 'Only one branch exists with 2 nodes.' }
     ],
-    solution: 'def maxDepth(root):\n    if not root: return 0\n    return 1 + max(maxDepth(root.left), maxDepth(root.right))',
-    time_complexity: 'O(n)', space_complexity: 'O(h)',
-    companies: ['Amazon', 'Facebook']
+    hints: [
+      'Think about the depth as: 1 for the current node plus the depth of its deeper child subtree.',
+      'Depth-first search (DFS) with recursion naturally computes this. The depth of a node is 1 plus the maximum depth of its children.',
+      'Base case: if node is null, return 0. Recursive case: return 1 + max(maxDepth(left), maxDepth(right)).'
+    ],
+    solution: 'def maxDepth(root):\n    if not root: return 0\n    return 1 + max(maxDepth(root[1]) if len(root) > 1 and root[1] else 0,\n                    maxDepth(root[2]) if len(root) > 2 and root[2] else 0)',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(h)',
+    companies: ['Amazon', 'Google', 'Meta']
   },
   {
-    id: 'trees-002', title: 'Validate Binary Search Tree', topic: 'trees', difficulty: 'Medium',
-    description: 'Given the root of a binary tree, determine if it is a valid BST. A valid BST has: left subtree nodes with values strictly less than the node, right subtree nodes with values strictly greater.',
-    examples: [{ input: 'root=[2,1,3]', output: 'true' }],
-    hints: [
-      'Checking just left < root < right at each node is not enough — consider [5,1,4,null,null,3,6].',
-      'Pass valid min and max bounds down the tree as you recurse. Every node must stay within its inherited range.',
-      'validate(node, min=-inf, max=+inf). Left call: validate(left, min, node.val). Right call: validate(right, node.val, max).'
+    id: 'trees-002',
+    title: 'Binary Tree Level Order Traversal',
+    topic: 'trees',
+    difficulty: 'Medium',
+    description: 'Given the root of a binary tree, return the level order traversal of its nodes\' values as a list of lists, where each inner list contains the values at that level from left to right. Use BFS with a queue.',
+    examples: [
+      { input: 'root=[3,9,20,null,null,15,7]', output: '[[3],[9,20],[15,7]]', explanation: 'Level 0: [3], Level 1: [9,20], Level 2: [15,7].' },
+      { input: 'root=[1]', output: '[[1]]', explanation: 'Only one node at level 0.' }
     ],
-    solution: 'def isValidBST(root, lo=float("-inf"), hi=float("inf")):\n    if not root: return True\n    if not (lo < root.val < hi): return False\n    return isValidBST(root.left, lo, root.val) and isValidBST(root.right, root.val, hi)',
-    time_complexity: 'O(n)', space_complexity: 'O(h)',
-    companies: ['Amazon', 'Google', 'Microsoft']
+    hints: [
+      'Level order means visiting all nodes at depth d before moving to depth d+1 — like scanning row by row.',
+      'Use a queue (BFS). Process all nodes at the current level, then prepare their children for the next level.',
+      'Add root to queue. While queue not empty: record size, dequeue that many nodes, add their values and enqueue their children.'
+    ],
+    solution: 'from collections import deque\ndef levelOrder(root):\n    if not root: return []\n    q, res = deque([root]), []\n    while q:\n        level = []\n        for _ in range(len(q)):\n            node = q.popleft()\n            level.append(node[0])\n            for child in node[1:]:\n                if child: q.append(child)\n        res.append(level)\n    return res',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(n)',
+    companies: ['Amazon', 'Microsoft', 'Google', 'Meta']
   },
   {
-    id: 'trees-003', title: 'Binary Tree Level Order Traversal', topic: 'trees', difficulty: 'Hard',
-    description: 'Given the root of a binary tree, return the level order traversal of its nodes\' values (i.e., from left to right, level by level) as a list of lists.',
-    examples: [{ input: 'root=[3,9,20,null,null,15,7]', output: '[[3],[9,20],[15,7]]' }],
-    hints: [
-      'Level order means visiting all nodes at depth 1, then depth 2, and so on — like scanning row by row.',
-      'A queue (BFS) is the right tool. Add the root, then process one full level at a time.',
-      'At each level, record queue size N. Dequeue N nodes, add their values to current level, enqueue their children. Repeat.'
+    id: 'trees-003',
+    title: 'Binary Tree Maximum Path Sum',
+    topic: 'trees',
+    difficulty: 'Hard',
+    description: 'Given the root of a binary tree represented as nested lists, return the maximum path sum. A path is a sequence of nodes where each pair of adjacent nodes is connected by an edge. The path does not need to go through the root, and must contain at least one node.',
+    examples: [
+      { input: 'root=[-10,9,20,null,null,15,7]', output: '42', explanation: 'The path 15 → 20 → 7 has sum 42.' },
+      { input: 'root=[2,-1]', output: '2', explanation: 'The path is just the node with value 2.' }
     ],
-    solution: 'from collections import deque\ndef levelOrder(root):\n    if not root: return []\n    q, res = deque([root]), []\n    while q:\n        level = []\n        for _ in range(len(q)):\n            node = q.popleft()\n            level.append(node.val)\n            if node.left: q.append(node.left)\n            if node.right: q.append(node.right)\n        res.append(level)\n    return res',
-    time_complexity: 'O(n)', space_complexity: 'O(n)',
-    companies: ['Facebook', 'Amazon', 'Google']
+    hints: [
+      'A path that ends at a node can either come from its left child, right child, or be just the node itself.',
+      'For each node, compute the best path sum that goes from that node downward. Track the global maximum as you go.',
+      'Use recursion. For each node: best_down = max(node_val, node_val + max(left, right)). Update global max with node_val + max(0, left) + max(0, right).'
+    ],
+    solution: 'def maxPathSum(root):\n    def dfs(node):\n        if not node: return 0\n        left = max(dfs(node[1]) if len(node) > 1 and node[1] else 0\n        right = max(dfs(node[2]) if len(node) > 2 and node[2] else 0\n        nonlocal_max[0] = max(nonlocal_max[0], node[0] + max(0, left) + max(0, right))\n        return node[0] + max(0, max(left, right))\n    nonlocal_max = [float(\"-inf\")]\n    dfs(root)\n    return nonlocal_max[0]',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(h)',
+    companies: ['Google', 'Meta', 'Microsoft', 'Amazon']
   },
 
   // ─── GRAPHS ───────────────────────────────────────────────
   {
-    id: 'graphs-001', title: 'Number of Islands', topic: 'graphs', difficulty: 'Easy',
-    description: 'Given an m x n 2D binary grid of "1"s (land) and "0"s (water), return the number of islands. An island is surrounded by water and formed by connecting adjacent lands horizontally or vertically.',
-    examples: [{ input: 'grid=[["1","1","0"],["0","1","0"],["0","0","1"]]', output: '2' }],
-    hints: [
-      'Each unvisited land cell "1" is the start of a new island. Count how many times you start a fresh exploration.',
-      'Use DFS or BFS from each new "1" cell. Mark all connected "1" cells as visited so you do not double-count.',
-      'Loop every cell. When you find "1", increment count and DFS to mark all connected land as "0" (visited).'
+    id: 'graphs-001',
+    title: 'Number of Islands',
+    topic: 'graphs',
+    difficulty: 'Easy',
+    description: 'Given an m x n 2D binary grid map representing land (\'1\') and water (\'0\'), count the number of islands. An island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically.',
+    examples: [
+      { input: 'grid=[["1","1","0"],["0","1","0"],["0","0","1"]]', output: '2', explanation: 'Two islands: one at top-left and one at bottom-right.' },
+      { input: 'grid=[["1","1"],["1","1"]]', output: '1', explanation: 'All cells connect to form one island.' }
     ],
-    solution: 'def numIslands(grid):\n    count = 0\n    def dfs(i, j):\n        if i < 0 or i >= len(grid) or j < 0 or j >= len(grid[0]) or grid[i][j] != "1": return\n        grid[i][j] = "0"\n        for di, dj in [(0,1),(0,-1),(1,0),(-1,0)]: dfs(i+di, j+dj)\n    for i in range(len(grid)):\n        for j in range(len(grid[0])):\n            if grid[i][j] == "1": count += 1; dfs(i, j)\n    return count',
-    time_complexity: 'O(m*n)', space_complexity: 'O(m*n)',
-    companies: ['Amazon', 'Google', 'Microsoft']
+    hints: [
+      'Every unvisited land cell you encounter could be the start of a new island.',
+      'Use DFS or BFS from each new land cell to mark all connected land as visited so you do not count it twice.',
+      'Iterate through every cell. When you find "1", increment count and run DFS to mark all connected "1"s as "0".'
+    ],
+    solution: 'def numIslands(grid):\n    if not grid: return 0\n    count = 0\n    def dfs(i, j):\n        if i < 0 or i >= len(grid) or j < 0 or j >= len(grid[0]) or grid[i][j] != "1": return\n        grid[i][j] = "0"\n        for di, dj in [(0,1),(0,-1),(1,0),(-1,0)]: dfs(i+di, j+dj)\n    for i in range(len(grid)):\n        for j in range(len(grid[0])):\n            if grid[i][j] == "1":\n                count += 1\n                dfs(i, j)\n    return count',
+    time_complexity: 'O(m*n)',
+    space_complexity: 'O(m*n)',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft']
   },
   {
-    id: 'graphs-002', title: 'Course Schedule (Cycle Detection)', topic: 'graphs', difficulty: 'Medium',
-    description: 'There are numCourses labeled 0 to numCourses-1. Given prerequisites pairs [a,b] meaning you must take course b before a, return true if you can finish all courses.',
-    examples: [{ input: 'numCourses=2, prerequisites=[[1,0]]', output: 'true' }],
+    id: 'graphs-002',
+    title: 'Course Schedule',
+    topic: 'graphs',
+    difficulty: 'Medium',
+    description: 'There are numCourses courses labeled from 0 to numCourses-1. Some courses have prerequisites given as pairs [a, b] where you must take course b before course a. Return true if you can finish all courses.',
+    examples: [
+      { input: 'numCourses=2, prerequisites=[[1,0]]', output: 'true', explanation: 'Take course 0 first, then course 1.' },
+      { input: 'numCourses=2, prerequisites=[[1,0],[0,1]]', output: 'false', explanation: 'Cycle: 0 depends on 1, 1 depends on 0 — impossible.' }
+    ],
     hints: [
-      'This is a cycle detection problem on a directed graph. If there is a cycle, you cannot complete all courses.',
-      'Build an adjacency list. Use DFS with three states per node: unvisited, in-progress, done.',
-      'If during DFS you reach a node that is in-progress (currently in the call stack), a cycle exists — return false.'
+      'This is a classic cycle detection problem on a directed graph. If a cycle exists, you cannot complete all courses.',
+      'Use topological sort with DFS. Track three states per node: unvisited, in-progress (in current recursion stack), done.',
+      'Build adjacency list. DFS: return false if you reach an in-progress node (cycle). Mark node done when fully processed.'
     ],
     solution: 'def canFinish(numCourses, prerequisites):\n    graph = [[] for _ in range(numCourses)]\n    for a, b in prerequisites: graph[b].append(a)\n    state = [0] * numCourses\n    def dfs(node):\n        if state[node] == 1: return False\n        if state[node] == 2: return True\n        state[node] = 1\n        for nb in graph[node]:\n            if not dfs(nb): return False\n        state[node] = 2\n        return True\n    return all(dfs(i) for i in range(numCourses))',
-    time_complexity: 'O(V+E)', space_complexity: 'O(V+E)',
-    companies: ['Google', 'Facebook', 'Uber']
+    time_complexity: 'O(V+E)',
+    space_complexity: 'O(V+E)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
   {
-    id: 'graphs-003', title: 'Shortest Path in Binary Matrix', topic: 'graphs', difficulty: 'Hard',
-    description: 'Given an n x n binary matrix grid, return the length of the shortest clear path from top-left (0,0) to bottom-right (n-1,n-1). A clear path uses only 0-valued cells and moves in 8 directions. Return -1 if no path exists.',
-    examples: [{ input: 'grid=[[0,1],[1,0]]', output: '2' }],
-    hints: [
-      'Shortest path in an unweighted grid — BFS is always the right choice here.',
-      'Start BFS from (0,0). Each step, explore all 8 neighbors. Track distance with the queue.',
-      'Queue stores (row, col, distance). Mark cells visited when enqueued. Return distance when you reach (n-1,n-1).'
+    id: 'graphs-003',
+    title: 'Word Ladder',
+    topic: 'graphs',
+    difficulty: 'Hard',
+    description: 'Given a beginWord, an endWord, and a wordList, find the length of the shortest transformation sequence from beginWord to endWord. Change only one letter at a time, and each intermediate word must exist in wordList. Return 0 if no path exists.',
+    examples: [
+      { input: 'beginWord="hit", endWord="cog", wordList=["hot","dot","dog","lot","log","cog"]', output: '5', explanation: 'hit → hot → dot → dog → cog has length 5.' },
+      { input: 'beginWord="hit", endWord="cog", wordList=["hot","dot","dog","lot","log"]', output: '0', explanation: 'No path exists to reach cog.' }
     ],
-    solution: 'from collections import deque\ndef shortestPathBinaryMatrix(grid):\n    n = len(grid)\n    if grid[0][0] or grid[n-1][n-1]: return -1\n    q = deque([(0, 0, 1)])\n    grid[0][0] = 1\n    dirs = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]\n    while q:\n        r, c, d = q.popleft()\n        if r == n-1 and c == n-1: return d\n        for dr, dc in dirs:\n            nr, nc = r+dr, c+dc\n            if 0 <= nr < n and 0 <= nc < n and not grid[nr][nc]:\n                grid[nr][nc] = 1\n                q.append((nr, nc, d+1))\n    return -1',
-    time_complexity: 'O(n²)', space_complexity: 'O(n²)',
-    companies: ['Google', 'Facebook']
+    hints: [
+      'Each word is a node. Two words are connected if they differ by exactly one letter. You need the shortest path.',
+      'Breadth-first search (BFS) starting from beginWord finds the shortest transformation sequence.',
+      'Use BFS with a queue. For each word, generate all possible one-letter variations. If a word is in the list, add to queue and remove from list to avoid revisiting.'
+    ],
+    solution: 'from collections import deque\ndef ladderLength(beginWord, endWord, wordList):\n    wordSet = set(wordList)\n    if endWord not in wordSet: return 0\n    q = deque([(beginWord, 1)])\n    wordSet.discard(beginWord)\n    while q:\n        word, length = q.popleft()\n        if word == endWord: return length\n        for i in range(len(word)):\n            for c in \"abcdefghijklmnopqrstuvwxyz\":\n                new_word = word[:i] + c + word[i+1:]\n                if new_word in wordSet:\n                    wordSet.discard(new_word)\n                    q.append((new_word, length + 1))\n    return 0',
+    time_complexity: 'O(N * L * 26)',
+    space_complexity: 'O(N)',
+    companies: ['Amazon', 'Google', 'Meta']
   },
 
   // ─── DYNAMIC PROGRAMMING ──────────────────────────────────
   {
-    id: 'dp-001', title: 'Climbing Stairs', topic: 'dp', difficulty: 'Easy',
-    description: 'You are climbing a staircase with n steps. Each time you can climb 1 or 2 steps. How many distinct ways can you climb to the top?',
-    examples: [{ input: 'n=3', output: '3', explanation: '1+1+1, 1+2, 2+1' }],
+    id: 'dp-001',
+    title: 'Climbing Stairs',
+    topic: 'dp',
+    difficulty: 'Easy',
+    description: 'You are climbing a staircase with n steps. Each time you can climb either 1 step or 2 steps. In how many distinct ways can you climb to the top?',
+    examples: [
+      { input: 'n=2', output: '2', explanation: 'Two ways: 1+1 or 2.' },
+      { input: 'n=3', output: '3', explanation: 'Three ways: 1+1+1, 1+2, 2+1.' }
+    ],
     hints: [
-      'The number of ways to reach step n depends only on steps n-1 and n-2.',
+      'To reach step n, you must have come from step n-1 (climbing 1) or step n-2 (climbing 2).',
       'ways(n) = ways(n-1) + ways(n-2). This is exactly the Fibonacci sequence.',
-      'Base cases: ways(1)=1, ways(2)=2. Iterate from 3 to n, keeping only the last two values.'
+      'Base cases: n=1 returns 1, n=2 returns 2. Iterate, keeping track of only the previous two values.'
     ],
-    solution: 'def climbStairs(n):\n    a, b = 1, 2\n    for _ in range(n - 1): a, b = b, a + b\n    return a',
-    time_complexity: 'O(n)', space_complexity: 'O(1)',
-    companies: ['Amazon', 'Apple', 'Adobe']
+    solution: 'def climbStairs(n):\n    if n <= 2: return n\n    a, b = 1, 2\n    for _ in range(2, n):\n        a, b = b, a + b\n    return b',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(1)',
+    companies: ['Amazon', 'Google', 'Apple', 'Adobe']
   },
   {
-    id: 'dp-002', title: 'Coin Change', topic: 'dp', difficulty: 'Medium',
-    description: 'Given an array of coin denominations and a total amount, return the fewest number of coins needed to make up that amount. Return -1 if it cannot be done.',
-    examples: [{ input: 'coins=[1,5,6,9], amount=11', output: '2', explanation: '5+6=11' }],
-    hints: [
-      'Try every possible last coin. The answer for amount A = 1 + answer for (A - coin) for the best coin.',
-      'Use a dp array of size amount+1. dp[i] = min coins to make amount i.',
-      'dp[0]=0. For each amount from 1 to amount, try every coin: dp[i] = min(dp[i], dp[i-coin]+1).'
+    id: 'dp-002',
+    title: 'Coin Change',
+    topic: 'dp',
+    difficulty: 'Medium',
+    description: 'Given an array of coin denominations (positive integers) and an amount, return the minimum number of coins needed to make up that amount. If it is impossible, return -1.',
+    examples: [
+      { input: 'coins=[1,5,6,9], amount=11', output: '2', explanation: 'Use 5 + 6 = 11, which is 2 coins (minimum).' },
+      { input: 'coins=[2], amount=3', output: '-1', explanation: 'Cannot make amount 3 with coin denomination 2.' }
     ],
-    solution: 'def coinChange(coins, amount):\n    dp = [float("inf")] * (amount + 1)\n    dp[0] = 0\n    for i in range(1, amount + 1):\n        for c in coins:\n            if c <= i: dp[i] = min(dp[i], dp[i-c] + 1)\n    return dp[amount] if dp[amount] != float("inf") else -1',
-    time_complexity: 'O(amount * coins)', space_complexity: 'O(amount)',
-    companies: ['Google', 'Amazon', 'Microsoft']
+    hints: [
+      'Try every possible coin as the last coin. The answer for amount A is the minimum of (1 + answer for amount A - coin).',
+      'Use bottom-up DP: dp[i] = minimum coins to make amount i. Initialize dp[0] = 0.',
+      'For each amount from 1 to target, try each coin: if coin <= amount, dp[amount] = min(dp[amount], dp[amount-coin] + 1).'
+    ],
+    solution: 'def coinChange(coins, amount):\n    dp = [float(\"inf\")] * (amount + 1)\n    dp[0] = 0\n    for i in range(1, amount + 1):\n        for c in coins:\n            if c <= i:\n                dp[i] = min(dp[i], dp[i - c] + 1)\n    return dp[amount] if dp[amount] != float(\"inf\") else -1',
+    time_complexity: 'O(amount * len(coins))',
+    space_complexity: 'O(amount)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
   {
-    id: 'dp-003', title: 'Longest Common Subsequence', topic: 'dp', difficulty: 'Hard',
-    description: 'Given two strings text1 and text2, return the length of their longest common subsequence. A subsequence is a sequence that appears in the same relative order but not necessarily contiguous.',
-    examples: [{ input: 'text1="abcde", text2="ace"', output: '3', explanation: 'LCS is "ace"' }],
-    hints: [
-      'Consider the last characters of both strings. If they match, they are part of the LCS.',
-      'Build a 2D DP table. dp[i][j] = LCS length of text1[:i] and text2[:j].',
-      'If text1[i-1]==text2[j-1]: dp[i][j]=dp[i-1][j-1]+1. Else: dp[i][j]=max(dp[i-1][j], dp[i][j-1]).'
+    id: 'dp-003',
+    title: 'Longest Increasing Subsequence',
+    topic: 'dp',
+    difficulty: 'Hard',
+    description: 'Given an integer array nums, return the length of the longest strictly increasing subsequence. A subsequence is a sequence derived from the array by deleting some elements without changing the order.',
+    examples: [
+      { input: 'nums=[10,9,2,5,3,7,101,18]', output: '4', explanation: 'LIS is [2,3,7,101] with length 4.' },
+      { input: 'nums=[0,1,0,3,2,3]', output: '4', explanation: 'LIS is [0,1,3,3] or [0,1,2,3], length 4.' }
     ],
-    solution: 'def longestCommonSubsequence(text1, text2):\n    m, n = len(text1), len(text2)\n    dp = [[0]*(n+1) for _ in range(m+1)]\n    for i in range(1,m+1):\n        for j in range(1,n+1):\n            if text1[i-1]==text2[j-1]: dp[i][j]=dp[i-1][j-1]+1\n            else: dp[i][j]=max(dp[i-1][j],dp[i][j-1])\n    return dp[m][n]',
-    time_complexity: 'O(m*n)', space_complexity: 'O(m*n)',
-    companies: ['Google', 'Amazon', 'Microsoft']
+    hints: [
+      'For each element, consider it as the potential end of an increasing subsequence.',
+      'The O(n log n) approach uses patience sorting. Maintain a tails array of the smallest tail for subsequences of each length.',
+      'Binary search to find where to insert each number. If larger than all tails, append. Else, replace the first larger element.'
+    ],
+    solution: 'import bisect\ndef lengthOfLIS(nums):\n    tails = []\n    for num in nums:\n        pos = bisect.bisect_left(tails, num)\n        if pos == len(tails):\n            tails.append(num)\n        else:\n            tails[pos] = num\n    return len(tails)',
+    time_complexity: 'O(n log n)',
+    space_complexity: 'O(n)',
+    companies: ['Google', 'Amazon', 'Microsoft', 'Meta']
   },
 
   // ─── RECURSION ────────────────────────────────────────────
   {
-    id: 'recursion-001', title: 'Reverse a Linked List (Recursive)', topic: 'recursion', difficulty: 'Easy',
-    description: 'Given the head of a singly linked list, reverse the list recursively and return the new head.',
-    examples: [{ input: '[1,2,3,4,5]', output: '[5,4,3,2,1]' }],
-    hints: [
-      'Reverse the rest of the list first, then fix the current node\'s pointer.',
-      'The new head is the head of the reversed sublist. After recursion, head.next.next = head.',
-      'Base case: if head is None or head.next is None, return head. Else: new_head = reverse(head.next); head.next.next = head; head.next = None; return new_head.'
+    id: 'recursion-001',
+    title: 'Fibonacci Number',
+    topic: 'recursion',
+    difficulty: 'Easy',
+    description: 'Given an integer n, return the nth Fibonacci number. The Fibonacci sequence is defined as: F(0) = 0, F(1) = 1, and F(n) = F(n-1) + F(n-2) for n >= 2.',
+    examples: [
+      { input: 'n=2', output: '1', explanation: 'F(2) = F(1) + F(0) = 1 + 0 = 1.' },
+      { input: 'n=4', output: '3', explanation: 'F(4) = F(3) + F(2) = 2 + 1 = 3.' }
     ],
-    solution: 'def reverseList(head):\n    if not head or not head.next: return head\n    new_head = reverseList(head.next)\n    head.next.next = head\n    head.next = None\n    return new_head',
-    time_complexity: 'O(n)', space_complexity: 'O(n)',
-    companies: ['Amazon', 'Microsoft']
+    hints: [
+      'Each Fibonacci number depends on the two numbers before it.',
+      'Use recursion with memoization (top-down DP) or iterate with bottom-up DP to avoid exponential time.',
+      'Base cases: n=0 returns 0, n=1 returns 1. Use a dictionary to cache computed values.'
+    ],
+    solution: 'def fib(n, memo={}):\n    if n in memo: return memo[n]\n    if n <= 1: return n\n    memo[n] = fib(n-1, memo) + fib(n-2, memo)\n    return memo[n]',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(n)',
+    companies: ['Amazon', 'Google', 'Apple']
   },
   {
-    id: 'recursion-002', title: 'Generate All Subsets (Power Set)', topic: 'recursion', difficulty: 'Medium',
-    description: 'Given an integer array nums with unique elements, return all possible subsets (the power set). The solution must not contain duplicate subsets.',
-    examples: [{ input: 'nums=[1,2,3]', output: '[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]' }],
-    hints: [
-      'At each position, you have exactly two choices: include this number or skip it.',
-      'Use backtracking. At each index, branch into two recursive calls: one including nums[i], one excluding.',
-      'backtrack(index, current). Base case: index==len(nums), add current copy to result. Else: include then backtrack, exclude then backtrack.'
+    id: 'recursion-002',
+    title: 'Generate Parentheses',
+    topic: 'recursion',
+    difficulty: 'Medium',
+    description: 'Given n pairs of parentheses, generate all combinations of well-formed parentheses. A well-formed string has balanced and properly ordered parentheses.',
+    examples: [
+      { input: 'n=1', output: '["()"]', explanation: 'Only one valid arrangement.' },
+      { input: 'n=2', output: '["(())","()()"]', explanation: 'Two valid arrangements.' }
     ],
-    solution: 'def subsets(nums):\n    res = []\n    def bt(i, cur):\n        if i == len(nums): res.append(cur[:]); return\n        cur.append(nums[i]); bt(i+1, cur); cur.pop()\n        bt(i+1, cur)\n    bt(0, [])\n    return res',
-    time_complexity: 'O(2^n)', space_complexity: 'O(n)',
-    companies: ['Amazon', 'Facebook', 'Bloomberg']
+    hints: [
+      'At any point, you can add an opening parenthesis if you have not used n yet.',
+      'You can add a closing parenthesis only if it would not exceed the number of opening parentheses used.',
+      'Backtrack: add "(" if open < n, add ")" if close < open. When open == close == n, add result.'
+    ],
+    solution: 'def generateParenthesis(n):\n    result = []\n    def backtrack(open, close, path):\n        if len(path) == 2 * n:\n            result.append(path)\n            return\n        if open < n:\n            backtrack(open + 1, close, path + \"(\")\n        if close < open:\n            backtrack(open, close + 1, path + \")\")\n    backtrack(0, 0, \"\")\n    return result',
+    time_complexity: 'O(4^n / n^(1/2))',
+    space_complexity: 'O(n)',
+    companies: ['Google', 'Meta', 'Amazon', 'Microsoft']
   },
   {
-    id: 'recursion-003', title: 'Word Search', topic: 'recursion', difficulty: 'Hard',
-    description: 'Given an m x n grid of characters and a string word, return true if word exists in the grid. The word must be constructed from sequentially adjacent cells (horizontally or vertically). The same cell may not be used more than once.',
-    examples: [{ input: 'board=[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]], word="ABCCED"', output: 'true' }],
-    hints: [
-      'Try starting from every cell that matches word[0]. From there, explore all 4 directions.',
-      'Use backtracking DFS. Mark a cell as visited before recursing, and unmark it after.',
-      'dfs(r, c, index): if index==len(word) return True. Check bounds, visited, and character match. Mark visited, recurse in 4 dirs, unmark visited.'
+    id: 'recursion-003',
+    title: 'N-Queens',
+    topic: 'recursion',
+    difficulty: 'Hard',
+    description: 'The n-Queens puzzle is the problem of placing n queens on an n×n chessboard so that no two queens can attack each other. Return all distinct solutions, each as a list of strings representing the board.',
+    examples: [
+      { input: 'n=1', output: '["Q"]', explanation: 'A single queen can be placed anywhere.' },
+      { input: 'n=2', output: '[]', explanation: 'No solution exists for n=2.' }
     ],
-    solution: 'def exist(board, word):\n    R,C=len(board),len(board[0])\n    def dfs(r,c,i):\n        if i==len(word): return True\n        if r<0 or r>=R or c<0 or c>=C or board[r][c]!=word[i]: return False\n        tmp=board[r][c]; board[r][c]="#"\n        found=any(dfs(r+dr,c+dc,i+1) for dr,dc in [(0,1),(0,-1),(1,0),(-1,0)])\n        board[r][c]=tmp; return found\n    return any(dfs(r,c,0) for r in range(R) for c in range(C))',
-    time_complexity: 'O(m*n*4^L)', space_complexity: 'O(L)',
-    companies: ['Amazon', 'Facebook', 'Microsoft']
+    hints: [
+      'Queens attack along rows, columns, and diagonals. You must ensure no two queens share the same row, column, or diagonal.',
+      'Use backtracking. Place queens row by row. Track which columns and diagonals are occupied.',
+      'Use sets for columns and diagonals. Diagonal: (row-col) and (row+col) identify diagonals. Recurse row by row.'
+    ],
+    solution: 'def solveNQueens(n):\n    cols = set()\n    pos_diag = set()\n    neg_diag = set()\n    result = []\n    board = [\"-\" * n for _ in range(n)]\n    def backtrack(row):\n        if row == n:\n            result.append(list(board))\n            return\n        for col in range(n):\n            if col in cols or (row - col) in pos_diag or (row + col) in neg_diag:\n                continue\n            cols.add(col)\n            pos_diag.add(row - col)\n            neg_diag.add(row + col)\n            board[row] = board[row][:col] + \"Q\" + board[row][col+1:]\n            backtrack(row + 1)\n            cols.remove(col)\n            pos_diag.remove(row - col)\n            neg_diag.remove(row + col)\n            board[row] = \"-\" * n\n    backtrack(0)\n    return result',
+    time_complexity: 'O(n!)',
+    space_complexity: 'O(n)',
+    companies: ['Google', 'Amazon', 'Meta']
   },
 
   // ─── SORTING ──────────────────────────────────────────────
   {
-    id: 'sorting-001', title: 'Merge Sorted Arrays', topic: 'sorting', difficulty: 'Easy',
-    description: 'Given two sorted integer arrays nums1 and nums2, merge nums2 into nums1 in-place. nums1 has extra space at the end for the merged elements.',
-    examples: [{ input: 'nums1=[1,2,3,0,0,0] m=3, nums2=[2,5,6] n=3', output: '[1,2,2,3,5,6]' }],
+    id: 'sorting-001',
+    title: 'Merge Sorted Array',
+    topic: 'sorting',
+    difficulty: 'Easy',
+    description: 'Given two sorted integer arrays nums1 and nums2, merge nums2 into nums1 in-place as a sorted array. nums1 has enough space at the end to hold nums2 elements.',
+    examples: [
+      { input: 'nums1=[1,2,3,0,0,0], m=3, nums2=[2,5,6], n=3', output: '[1,2,2,3,5,6]', explanation: 'Merge the two sorted arrays into one.' },
+      { input: 'nums1=[1], m=1, nums2=[], n=0', output: '[1]', explanation: 'nums2 is empty.' }
+    ],
     hints: [
       'Work from the back of both arrays to avoid overwriting elements you still need.',
-      'Use three pointers: one at end of valid nums1, one at end of nums2, one at end of total space.',
-      'Compare from the back. Place the larger element at the back of nums1. Move that pointer left.'
+      'Use three pointers: one at the end of valid nums1, one at the end of nums2, one at the end of total space.',
+      'Compare elements at the two pointers. Place the larger element at the end of nums1. Move inward.'
     ],
-    solution: 'def merge(nums1, m, nums2, n):\n    i,j,k=m-1,n-1,m+n-1\n    while j>=0:\n        if i>=0 and nums1[i]>nums2[j]: nums1[k]=nums1[i];i-=1\n        else: nums1[k]=nums2[j];j-=1\n        k-=1',
-    time_complexity: 'O(m+n)', space_complexity: 'O(1)',
-    companies: ['Amazon', 'Microsoft', 'Apple']
+    solution: 'def merge(nums1, m, nums2, n):\n    i, j, k = m - 1, n - 1, m + n - 1\n    while j >= 0:\n        if i >= 0 and nums1[i] > nums2[j]:\n            nums1[k] = nums1[i]\n            i -= 1\n        else:\n            nums1[k] = nums2[j]\n            j -= 1\n        k -= 1',
+    time_complexity: 'O(m+n)',
+    space_complexity: 'O(1)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
   {
-    id: 'sorting-002', title: 'Sort Colors (Dutch National Flag)', topic: 'sorting', difficulty: 'Medium',
-    description: 'Given an array with values 0, 1, and 2 representing colors red, white, and blue, sort them in-place so all 0s come first, then 1s, then 2s. Use constant extra space.',
-    examples: [{ input: 'nums=[2,0,2,1,1,0]', output: '[0,0,1,1,2,2]' }],
+    id: 'sorting-002',
+    title: 'Sort Colors',
+    topic: 'sorting',
+    difficulty: 'Medium',
+    description: 'Given an array nums with n objects colored 0, 1, or 2 (red, white, blue), sort them in-place so that all 0s come first, then 1s, then 2s. Use the Dutch National Flag algorithm with O(1) space.',
+    examples: [
+      { input: 'nums=[2,0,2,1,1,0]', output: '[0,0,1,1,2,2]', explanation: 'Sorted by color: 0s (red), 1s (white), 2s (blue).' },
+      { input: 'nums=[2,2,1,0]', output: '[0,1,2,2]', explanation: 'Single 0 at the beginning.' }
+    ],
     hints: [
-      'You need to partition the array into three sections in one pass.',
-      'Use three pointers: low (next 0 position), mid (current element), high (next 2 position).',
-      'If mid==0: swap with low, advance low and mid. If mid==2: swap with high, retreat high. If mid==1: just advance mid.'
+      'You need to partition the array into three sections in a single pass without using a library sort.',
+      'Use three pointers: low (next position for 0), mid (current being processed), high (next position for 2).',
+      'If mid == 0: swap with low, advance low and mid. If mid == 2: swap with high, retreat high. If mid == 1: advance mid.'
     ],
-    solution: 'def sortColors(nums):\n    lo,mid,hi=0,0,len(nums)-1\n    while mid<=hi:\n        if nums[mid]==0: nums[lo],nums[mid]=nums[mid],nums[lo];lo+=1;mid+=1\n        elif nums[mid]==2: nums[mid],nums[hi]=nums[hi],nums[mid];hi-=1\n        else: mid+=1',
-    time_complexity: 'O(n)', space_complexity: 'O(1)',
-    companies: ['Facebook', 'Microsoft']
+    solution: 'def sortColors(nums):\n    lo, mid, hi = 0, 0, len(nums) - 1\n    while mid <= hi:\n        if nums[mid] == 0:\n            nums[lo], nums[mid] = nums[mid], nums[lo]\n            lo += 1\n            mid += 1\n        elif nums[mid] == 2:\n            nums[mid], nums[hi] = nums[hi], nums[mid]\n            hi -= 1\n        else:\n            mid += 1',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(1)',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft']
   },
   {
-    id: 'sorting-003', title: 'Largest Number', topic: 'sorting', difficulty: 'Hard',
-    description: 'Given a list of non-negative integers, arrange them so that they form the largest possible number and return it as a string.',
-    examples: [{ input: 'nums=[3,30,34,5,9]', output: '"9534330"' }],
+    id: 'sorting-003',
+    title: 'Largest Number',
+    topic: 'sorting',
+    difficulty: 'Hard',
+    description: 'Given a list of non-negative integers nums, arrange them to form the largest possible number and return it as a string. For example, [10,2] arranges to "210210" which is larger than "10210".',
+    examples: [
+      { input: 'nums=[3,30,34,5,9]', output: '"9534330"', explanation: '9 + 53 + 43 + 30 forms the largest number 9534330.' },
+      { input: 'nums=[1]', output: '"1"', explanation: 'Single element.' }
+    ],
     hints: [
       'The challenge is defining what "larger" means when comparing two numbers for ordering.',
-      'Compare two numbers a and b by checking whether str(a)+str(b) > str(b)+str(a).',
-      'Use a custom comparator with functools.cmp_to_key. Sort descending. Handle the edge case where result is all zeros.'
+      'Compare two numbers a and b by checking whether str(a) + str(b) is greater than str(b) + str(a).',
+      'Use custom comparator. Sort descending by comparator(a,b): return 1 if a+b < b+a (swap). Handle all-zeros edge case.'
     ],
-    solution: 'from functools import cmp_to_key\ndef largestNumber(nums):\n    nums=list(map(str,nums))\n    nums.sort(key=cmp_to_key(lambda a,b: 1 if a+b<b+a else -1))\n    return "0" if nums[0]=="0" else "".join(nums)',
-    time_complexity: 'O(n log n)', space_complexity: 'O(n)',
-    companies: ['Google', 'Amazon']
+    solution: 'from functools import cmp_to_key\ndef largestNumber(nums):\n    def compare(a, b):\n        if a + b > b + a:\n            return -1\n        elif a + b < b + a:\n            return 1\n        return 0\n    nums = list(map(str, nums))\n    nums.sort(key=cmp_to_key(compare))\n    result = \"\".join(nums)\n    return result if result[0] != \"0\" else \"0\"',
+    time_complexity: 'O(n log n)',
+    space_complexity: 'O(n)',
+    companies: ['Amazon', 'Google', 'Meta']
   },
 
   // ─── SEARCHING ────────────────────────────────────────────
   {
-    id: 'searching-001', title: 'Binary Search', topic: 'searching', difficulty: 'Easy',
-    description: 'Given a sorted array of distinct integers and a target, return the index of the target. If not found, return -1. You must use O(log n) runtime.',
-    examples: [{ input: 'nums=[-1,0,3,5,9,12], target=9', output: '4' }],
-    hints: [
-      'You can eliminate half the array with every comparison because the array is sorted.',
-      'Maintain a lo and hi pointer. Check the middle element each time.',
-      'If mid==target return mid. If mid<target move lo=mid+1. If mid>target move hi=mid-1.'
+    id: 'searching-001',
+    title: 'Binary Search',
+    topic: 'searching',
+    difficulty: 'Easy',
+    description: 'Given a sorted array of distinct integers nums and a target, return the index of target if it exists, otherwise return -1. Use O(log n) time.',
+    examples: [
+      { input: 'nums=[-1,0,3,5,9,12], target=9', output: '4', explanation: '9 is at index 4.' },
+      { input: 'nums=[-1,0,3,5,9,12], target=2', output: '-1', explanation: '2 does not exist in the array.' }
     ],
-    solution: 'def search(nums, target):\n    lo,hi=0,len(nums)-1\n    while lo<=hi:\n        mid=(lo+hi)//2\n        if nums[mid]==target: return mid\n        elif nums[mid]<target: lo=mid+1\n        else: hi=mid-1\n    return -1',
-    time_complexity: 'O(log n)', space_complexity: 'O(1)',
-    companies: ['Amazon', 'Google', 'Microsoft']
+    hints: [
+      'Because the array is sorted, you can eliminate half of it with each comparison.',
+      'Maintain left and right pointers. Check the middle element each iteration.',
+      'If mid == target: return mid. If mid < target: move left to mid+1. If mid > target: move right to mid-1.'
+    ],
+    solution: 'def search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        elif nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1',
+    time_complexity: 'O(log n)',
+    space_complexity: 'O(1)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft', 'Apple']
   },
   {
-    id: 'searching-002', title: 'Search in Rotated Sorted Array', topic: 'searching', difficulty: 'Medium',
-    description: 'A sorted array has been rotated at an unknown pivot. Given the array and a target, return the index of target or -1 if not found. Must run in O(log n).',
-    examples: [{ input: 'nums=[4,5,6,7,0,1,2], target=0', output: '4' }],
-    hints: [
-      'Even after rotation, one half of the array around mid is always sorted.',
-      'Check which half is sorted. If target is within the sorted half, search there; otherwise search the other half.',
-      'if nums[lo]<=nums[mid]: left half is sorted. Check if target in [nums[lo], nums[mid]]. Adjust lo/hi accordingly.'
+    id: 'searching-002',
+    title: 'Search in Rotated Sorted Array',
+    topic: 'searching',
+    difficulty: 'Medium',
+    description: 'A sorted array was rotated at some unknown pivot. Given the rotated array (which was sorted and then rotated) and a target, return the index of target or -1 if it does not exist. Must use O(log n).',
+    examples: [
+      { input: 'nums=[4,5,6,7,0,1,2], target=0', output: '4', explanation: '0 is at index 4.' },
+      { input: 'nums=[4,5,6,7,0,1,2], target=3', output: '-1', explanation: '3 does not exist.' }
     ],
-    solution: 'def search(nums, target):\n    lo,hi=0,len(nums)-1\n    while lo<=hi:\n        mid=(lo+hi)//2\n        if nums[mid]==target: return mid\n        if nums[lo]<=nums[mid]:\n            if nums[lo]<=target<nums[mid]: hi=mid-1\n            else: lo=mid+1\n        else:\n            if nums[mid]<target<=nums[hi]: lo=mid+1\n            else: hi=mid-1\n    return -1',
-    time_complexity: 'O(log n)', space_complexity: 'O(1)',
-    companies: ['Facebook', 'Amazon', 'Microsoft']
+    hints: [
+      'Even after rotation, one half of the array (from mid to end) is always sorted.',
+      'At each step, determine which half is sorted, then check if target is in that sorted range.',
+      'If nums[lo] <= nums[mid]: left half is sorted. Check if target in [nums[lo], nums[mid]]. Update pointers accordingly.'
+    ],
+    solution: 'def search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        if nums[lo] <= nums[mid]:\n            if nums[lo] <= target < nums[mid]:\n                hi = mid - 1\n            else:\n                lo = mid + 1\n        else:\n            if nums[mid] < target <= nums[hi]:\n                lo = mid + 1\n            else:\n                hi = mid - 1\n    return -1',
+    time_complexity: 'O(log n)',
+    space_complexity: 'O(1)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
   {
-    id: 'searching-003', title: 'Median of Two Sorted Arrays', topic: 'searching', difficulty: 'Hard',
-    description: 'Given two sorted arrays nums1 and nums2 of sizes m and n, return the median of the two combined sorted arrays. Must run in O(log(m+n)).',
-    examples: [{ input: 'nums1=[1,3], nums2=[2]', output: '2.0' }],
-    hints: [
-      'You need to find the correct partition point in both arrays simultaneously.',
-      'Binary search on the smaller array. For each partition of nums1, calculate the required partition of nums2.',
-      'Ensure max(left halves) <= min(right halves). If left1 > right2 move partition left; if left2 > right1 move right.'
+    id: 'searching-003',
+    title: 'Find Minimum in Rotated Sorted Array II',
+    topic: 'searching',
+    difficulty: 'Hard',
+    description: 'Given a rotated sorted array that may contain duplicates, find the minimum element. The array was originally sorted and then rotated at some pivot, possibly multiple times.',
+    examples: [
+      { input: 'nums=[1,3,5]', output: '1', explanation: 'No rotation, minimum is at index 0.' },
+      { input: 'nums=[2,2,2,0,1]', output: '0', explanation: 'Minimum is 0.' }
     ],
-    solution: 'def findMedianSortedArrays(nums1, nums2):\n    if len(nums1)>len(nums2): nums1,nums2=nums2,nums1\n    m,n=len(nums1),len(nums2); lo,hi=0,m\n    while lo<=hi:\n        i=(lo+hi)//2; j=(m+n+1)//2-i\n        l1=nums1[i-1] if i>0 else float("-inf")\n        r1=nums1[i] if i<m else float("inf")\n        l2=nums2[j-1] if j>0 else float("-inf")\n        r2=nums2[j] if j<n else float("inf")\n        if l1<=r2 and l2<=r1:\n            if (m+n)%2: return max(l1,l2)\n            return (max(l1,l2)+min(r1,r2))/2\n        elif l1>r2: hi=i-1\n        else: lo=i+1',
-    time_complexity: 'O(log(min(m,n)))', space_complexity: 'O(1)',
-    companies: ['Google', 'Amazon', 'Apple']
+    hints: [
+      'This is like the previous problem but with duplicates, which breaks the normal binary search logic.',
+      'When nums[left] == nums[mid] == nums[right], you cannot determine which side is sorted. Shrink the window.',
+      'Use binary search: if mid < high, minimum is in left half. If mid > high, in right half. If equal, reduce high.'
+    ],
+    solution: 'def findMin(nums):\n    lo, hi = 0, len(nums) - 1\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if nums[mid] > nums[hi]:\n            lo = mid + 1\n        elif nums[mid] < nums[hi]:\n            hi = mid\n        else:\n            hi -= 1\n    return nums[lo]',
+    time_complexity: 'O(log n)',
+    space_complexity: 'O(1)',
+    companies: ['Google', 'Amazon', 'Microsoft']
   },
 
   // ─── STRINGS ──────────────────────────────────────────────
   {
-    id: 'strings-001', title: 'Valid Palindrome', topic: 'strings', difficulty: 'Easy',
-    description: 'A phrase is a palindrome if, after converting all uppercase letters to lowercase and removing all non-alphanumeric characters, it reads the same forward and backward. Given a string s, return true if it is a palindrome.',
-    examples: [{ input: 's="A man, a plan, a canal: Panama"', output: 'true' }],
-    hints: [
-      'Clean the string first: keep only letters and digits, convert to lowercase.',
-      'Compare the cleaned string with its reverse.',
-      'Or use two pointers: one at start, one at end, skip non-alphanumeric, compare characters.'
+    id: 'strings-001',
+    title: 'Valid Palindrome',
+    topic: 'strings',
+    difficulty: 'Easy',
+    description: 'Given a string s, determine if it is a palindrome after converting all uppercase letters to lowercase and removing all non-alphanumeric characters. Consider only alphanumeric characters.',
+    examples: [
+      { input: 's="A man, a plan, a canal: Panama"', output: 'true', explanation: 'After cleaning: "amanaplanacanalpanama" which is a palindrome.' },
+      { input: 's="race a car"', output: 'false', explanation: 'After cleaning: "raceacar" is not a palindrome.' }
     ],
-    solution: 'def isPalindrome(s):\n    s="".join(c.lower() for c in s if c.isalnum())\n    return s==s[::-1]',
-    time_complexity: 'O(n)', space_complexity: 'O(n)',
-    companies: ['Facebook', 'Microsoft']
+    hints: [
+      'First, strip the string: keep only alphanumeric characters and convert to lowercase.',
+      'Then verify by comparing characters from the left with their mirror on the right.',
+      'Or use two pointers: left at start, right at end. Skip non-alphanumeric, compare characters after normalizing to lowercase.'
+    ],
+    solution: 'def isPalindrome(s):\n    cleaned = \"\".join(c.lower() for c in s if c.isalnum())\n    return cleaned == cleaned[::-1]',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(n)',
+    companies: ['Meta', 'Amazon', 'Google', 'Microsoft']
   },
   {
-    id: 'strings-002', title: 'Longest Substring Without Repeating Characters', topic: 'strings', difficulty: 'Medium',
-    description: 'Given a string s, find the length of the longest substring without repeating characters.',
-    examples: [{ input: 's="abcabcbb"', output: '3', explanation: '"abc" is the longest' }],
-    hints: [
-      'Use a sliding window that expands right and shrinks left when a duplicate is found.',
-      'A set or dictionary tracks which characters are in the current window.',
-      'When you see a duplicate char at right, move left pointer past the previous occurrence of that char.'
+    id: 'strings-002',
+    title: 'Longest Substring Without Repeating Characters',
+    topic: 'strings',
+    difficulty: 'Medium',
+    description: 'Given a string s, find the length of the longest substring without repeating characters. A substring is a contiguous sequence of characters.',
+    examples: [
+      { input: 's="abcabcbb"', output: '3', explanation: 'The longest substring without duplicates is "abc" with length 3.' },
+      { input: 's="bbbbb"', output: '1', explanation: 'Only "b" can appear once.' }
     ],
-    solution: 'def lengthOfLongestSubstring(s):\n    seen={}; lo=res=0\n    for hi,c in enumerate(s):\n        if c in seen and seen[c]>=lo: lo=seen[c]+1\n        seen[c]=hi; res=max(res,hi-lo+1)\n    return res',
-    time_complexity: 'O(n)', space_complexity: 'O(min(n,alphabet))',
-    companies: ['Amazon', 'Bloomberg', 'Adobe']
+    hints: [
+      'Use a sliding window that expands on the right and shrinks on the left when you encounter a duplicate.',
+      'Maintain a dictionary mapping each character to its most recent index.',
+      'When a character is already in the window, move the left pointer past its previous occurrence. Track max length.'
+    ],
+    solution: 'def lengthOfLongestSubstring(s):\n    seen = {}\n    lo = max_len = 0\n    for hi, c in enumerate(s):\n        if c in seen and seen[c] >= lo:\n            lo = seen[c] + 1\n        seen[c] = hi\n        max_len = max(max_len, hi - lo + 1)\n    return max_len',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(min(n, alphabet))',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft', 'Apple']
   },
   {
-    id: 'strings-003', title: 'Minimum Window Substring', topic: 'strings', difficulty: 'Hard',
-    description: 'Given strings s and t, return the minimum window substring of s that contains all characters in t. Return "" if no such window exists.',
-    examples: [{ input: 's="ADOBECODEBANC", t="ABC"', output: '"BANC"' }],
-    hints: [
-      'Use a sliding window. Expand right until all chars of t are covered. Then shrink left to find the minimum.',
-      'Track character frequencies of t in a need map. A formed counter tracks how many chars are fully satisfied.',
-      'When formed==len(need), record window size. Move left to try shrinking. Repeat until right reaches end.'
+    id: 'strings-003',
+    title: 'Minimum Window Substring',
+    topic: 'strings',
+    difficulty: 'Hard',
+    description: 'Given two strings s and t, find the minimum window substring of s that contains all characters from t (including duplicates). The minimum window is the smallest window in s that has all of t\'s characters. Return "" if no window exists.',
+    examples: [
+      { input: 's="ADOBECODEBANC", t="ABC"', output: '"BANC"', explanation: 'Window "BANC" contains A, B, C from t.' },
+      { input: 's="a", t="aa"', output: '""', explanation: 'No window contains two a\'s.' }
     ],
-    solution: 'from collections import Counter\ndef minWindow(s,t):\n    need=Counter(t); miss=len(t); lo=0; res=""\n    for hi,c in enumerate(s):\n        if need[c]>0: miss-=1\n        need[c]-=1\n        if miss==0:\n            while need[s[lo]]<0: need[s[lo]]+=1;lo+=1\n            if not res or hi-lo+1<len(res): res=s[lo:hi+1]\n            need[s[lo]]+=1;miss+=1;lo+=1\n    return res',
-    time_complexity: 'O(|s|+|t|)', space_complexity: 'O(|t|)',
-    companies: ['Facebook', 'LinkedIn', 'Snapchat']
+    hints: [
+      'Use a sliding window. Expand right until all characters of t are covered, then shrink from the left.',
+      'Maintain two frequency maps: one for the characters needed (t), one for the current window (s).',
+      'When the window satisfies all requirements, try shrinking. Record the smallest window that worked.'
+    ],
+    solution: 'from collections import Counter\ndef minWindow(s, t):\n    need = Counter(t)\n    missing = len(t)\n    lo = 0\n    result = \"\"\n    for hi, c in enumerate(s):\n        if need[c] > 0:\n            missing -= 1\n        need[c] -= 1\n        if missing == 0:\n            while need[s[lo]] < 0:\n                need[s[lo]] += 1\n                lo += 1\n            if not result or hi - lo + 1 < len(result):\n                result = s[lo:hi+1]\n            need[s[lo]] += 1\n            missing += 1\n            lo += 1\n    return result',
+    time_complexity: 'O(|s| + |t|)',
+    space_complexity: 'O(|t|)',
+    companies: ['Meta', 'Google', 'Amazon', 'Microsoft']
   },
 
   // ─── HEAPS ────────────────────────────────────────────────
   {
-    id: 'heaps-001', title: 'Kth Largest Element', topic: 'heaps', difficulty: 'Easy',
-    description: 'Given an integer array and an integer k, return the kth largest element in the array. Note: it is the kth largest in sorted order, not the kth distinct element.',
-    examples: [{ input: 'nums=[3,2,1,5,6,4], k=2', output: '5' }],
-    hints: [
-      'You need the kth largest — a min-heap of size k keeps the k largest elements seen so far.',
-      'Push each element into the heap. If heap size exceeds k, pop the smallest.',
-      'After processing all elements, the top of the min-heap (smallest of the k largest) is the kth largest.'
+    id: 'heaps-001',
+    title: 'Last Stone Weight',
+    topic: 'heaps',
+    difficulty: 'Easy',
+    description: 'Given an array of stone weights, repeatedly smash the two heaviest stones together. If they are equal, both are destroyed. If not, the difference becomes a new stone. Return the weight of the last remaining stone (0 if no stones left).',
+    examples: [
+      { input: 'stones=[2,7,4,1,8,1]', output: '1', explanation: 'Smash 7 and 2: new stone 5. Then 5 and 8: new stone 3. Then 4 and 3: new stone 1.' },
+      { input: 'stones=[1]', output: '1', explanation: 'Only one stone.' }
     ],
-    solution: 'import heapq\ndef findKthLargest(nums, k):\n    heap=[]\n    for n in nums:\n        heapq.heappush(heap,n)\n        if len(heap)>k: heapq.heappop(heap)\n    return heap[0]',
-    time_complexity: 'O(n log k)', space_complexity: 'O(k)',
-    companies: ['Facebook', 'Amazon', 'LinkedIn']
+    hints: [
+      'At each step, you need to find and remove the two largest stones quickly.',
+      'A max-heap is ideal, but Python has only min-heap. Use a min-heap with negated values.',
+      'Push all stones (negated) into heap. While more than 1 stone: pop two largest, calculate difference, push back if non-zero.'
+    ],
+    solution: 'import heapq\ndef lastStoneWeight(stones):\n    heap = [-s for s in stones]\n    heapq.heapify(heap)\n    while len(heap) > 1:\n        y = -heapq.heappop(heap)\n        x = -heapq.heappop(heap)\n        if y > x:\n            heapq.heappush(heap, -(y - x))\n    return -heap[0] if heap else 0',
+    time_complexity: 'O(n log n)',
+    space_complexity: 'O(n)',
+    companies: ['Amazon', 'Google']
   },
   {
-    id: 'heaps-002', title: 'Top K Frequent Elements', topic: 'heaps', difficulty: 'Medium',
-    description: 'Given an integer array and an integer k, return the k most frequent elements. You may return the answer in any order.',
-    examples: [{ input: 'nums=[1,1,1,2,2,3], k=2', output: '[1,2]' }],
-    hints: [
-      'First count the frequency of each element using a hashmap.',
-      'Then find the k elements with the highest frequency — a min-heap of size k works perfectly.',
-      'Push (frequency, element) pairs. Pop when size > k. The remaining k elements are the answer.'
+    id: 'heaps-002',
+    title: 'K Closest Points to Origin',
+    topic: 'heaps',
+    distance: 'Medium',
+    description: 'Given an array of points where points[i] = [x_i, y_i] and an integer k, return the k points closest to the origin (0, 0). Distance is calculated as sqrt(x² + y²). Return them in any order.',
+    examples: [
+      { input: 'points=[[1,3],[-2,2]], k=1', output: '[[-2,2]]', explanation: 'Distance of (1,3) is sqrt(10), (-2,2) is sqrt(8). Closer is (-2,2).' },
+      { input: 'points=[[3,0],[2,4],[5,0]], k=2', output: '[[2,4],[3,0]] or [[3,0],[2,4]]', explanation: 'Distances: sqrt(9), sqrt(20), sqrt(25). Closest 2.' }
     ],
-    solution: 'from collections import Counter\nimport heapq\ndef topKFrequent(nums, k):\n    count=Counter(nums)\n    return heapq.nlargest(k, count, key=count.get)',
-    time_complexity: 'O(n log k)', space_complexity: 'O(n)',
-    companies: ['Amazon', 'Bloomberg', 'Yelp']
+    hints: [
+      'You need to find k points with smallest distance. Consider using a heap of size k.',
+      'A max-heap of size k keeps the k smallest elements seen so far. Pop if heap exceeds k.',
+      'Push each point with its negative distance (for max-heap in Python) or use nlargest(k, points, key=...).'
+    ],
+    solution: 'import heapq\ndef kClosest(points, k):\n    def dist(point):\n        return point[0]**2 + point[1]**2\n    heap = []\n    for p in points:\n        heapq.heappush(heap, (-dist(p), p))\n        if len(heap) > k:\n            heapq.heappop(heap)\n    return [p for _, p in heap]',
+    time_complexity: 'O(n log k)',
+    space_complexity: 'O(k)',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft']
   },
   {
-    id: 'heaps-003', title: 'Find Median from Data Stream', topic: 'heaps', difficulty: 'Hard',
-    description: 'Design a data structure that supports addNum(int num) and findMedian() operations. findMedian returns the median of all elements added so far.',
-    examples: [{ input: 'addNum(1), addNum(2), findMedian() → 1.5, addNum(3), findMedian() → 2.0', output: '' }],
-    hints: [
-      'Split numbers into two halves: the smaller half and the larger half.',
-      'Use a max-heap for the lower half and a min-heap for the upper half. Keep them balanced in size.',
-      'addNum: push to max-heap, then balance by moving top of max-heap to min-heap if needed. findMedian: if equal size, average the tops; else return top of larger heap.'
+    id: 'heaps-003',
+    title: 'Find Median from Data Stream',
+    topic: 'heaps',
+    difficulty: 'Hard',
+    description: 'Design a data structure that supports adding an integer number and finding the median of all numbers added so far. Implement addNum(int num) and findMedian() methods.',
+    examples: [
+      { input: 'addNum(1), addNum(2), findMedian() → 1.5, addNum(3), findMedian() → 2.0', output: '' },
+      { input: 'addNum(12), findMedian() → 12.0', output: '' }
     ],
-    solution: 'import heapq\nclass MedianFinder:\n    def __init__(self): self.lo,self.hi=[],[]\n    def addNum(self,num):\n        heapq.heappush(self.lo,-num)\n        heapq.heappush(self.hi,-heapq.heappop(self.lo))\n        if len(self.hi)>len(self.lo): heapq.heappush(self.lo,-heapq.heappop(self.hi))\n    def findMedian(self):\n        if len(self.lo)>len(self.hi): return -self.lo[0]\n        return(-self.lo[0]+self.hi[0])/2',
-    time_complexity: 'O(log n) add, O(1) median', space_complexity: 'O(n)',
-    companies: ['Google', 'Amazon', 'Microsoft']
+    hints: [
+      'Split numbers into two halves: the smaller half (max-heap) and the larger half (min-heap).',
+      'The median is either the average of the two middle numbers (even count) or the middle number (odd count).',
+      'addNum: push to max-heap, then balance by moving the largest of the lower half to the min-heap. Keep sizes balanced.'
+    ],
+    solution: 'import heapq\nclass MedianFinder:\n    def __init__(self):\n        self.lo = []\n        self.hi = []\n    def addNum(self, num):\n        heapq.heappush(self.lo, -num)\n        heapq.heappush(self.hi, -heapq.heappop(self.lo))\n        if len(self.hi) > len(self.lo):\n            heapq.heappush(self.lo, -heapq.heappop(self.hi))\n    def findMedian(self):\n        if len(self.lo) > len(self.hi):\n            return -self.lo[0]\n        return (-self.lo[0] + self.hi[0]) / 2',
+    time_complexity: 'O(log n) add, O(1) median',
+    space_complexity: 'O(n)',
+    companies: ['Google', 'Amazon', 'Meta', 'Microsoft']
   },
 
   // ─── LINKED LISTS ─────────────────────────────────────────
   {
-    id: 'linked_lists-001', title: 'Detect Cycle in Linked List', topic: 'linked_lists', difficulty: 'Easy',
-    description: 'Given the head of a linked list, return true if there is a cycle (some node can be reached again by following next pointers).',
-    examples: [{ input: 'head=[3,2,0,-4], pos=1', output: 'true' }],
-    hints: [
-      'Imagine two runners on a circular track — a fast one and a slow one. If there is a loop, they must eventually meet.',
-      'Use two pointers: slow moves 1 step, fast moves 2 steps.',
-      'If fast or fast.next becomes None, there is no cycle. If slow==fast, a cycle exists.'
+    id: 'linked_lists-001',
+    title: 'Reverse Linked List',
+    topic: 'linked_lists',
+    difficulty: 'Easy',
+    description: 'Given the head of a singly linked list, reverse the list in-place and return the new head. Each node has a val and next pointer.',
+    examples: [
+      { input: 'head=[1,2,3,4,5]', output: '[5,4,3,2,1]', explanation: 'Reversed list.' },
+      { input: 'head=[1,2]', output: '[2,1]', explanation: 'Two elements reversed.' }
     ],
-    solution: 'def hasCycle(head):\n    slow=fast=head\n    while fast and fast.next:\n        slow=slow.next; fast=fast.next.next\n        if slow==fast: return True\n    return False',
-    time_complexity: 'O(n)', space_complexity: 'O(1)',
-    companies: ['Amazon', 'Bloomberg', 'Microsoft']
+    hints: [
+      'You need to reverse the direction of each pointer without losing the rest of the list.',
+      'Use three pointers: prev (previous node), curr (current node), next (save the rest). Update pointers in a loop.',
+      'Initialize prev=None, curr=head. While curr: next=curr.next; curr.next=prev; prev=curr; curr=next. Return prev.'
+    ],
+    solution: 'def reverseList(head):\n    prev = None\n    curr = head\n    while curr:\n        next_node = curr.next\n        curr.next = prev\n        prev = curr\n        curr = next_node\n    return prev',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(1)',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft', 'Apple']
   },
   {
-    id: 'linked_lists-002', title: 'Merge Two Sorted Lists', topic: 'linked_lists', difficulty: 'Medium',
-    description: 'Given the heads of two sorted linked lists, merge them into one sorted linked list and return its head.',
-    examples: [{ input: 'l1=[1,2,4], l2=[1,3,4]', output: '[1,1,2,3,4,4]' }],
-    hints: [
-      'Use a dummy head node to simplify edge cases. Build the merged list by choosing the smaller node each time.',
-      'Two pointers — one in each list. Always attach the smaller current node to the result.',
-      'When one list runs out, attach the remainder of the other list directly.'
+    id: 'linked_lists-002',
+    title: 'Detect Cycle in Linked List',
+    topic: 'linked_lists',
+    difficulty: 'Medium',
+    description: 'Given the head of a singly linked list, determine if there is a cycle in the list. A cycle exists if some node can be reached again by following next pointers. Use O(1) extra space (no hash set).',
+    examples: [
+      { input: 'head=[3,2,0,-4], pos=1', output: 'true', explanation: 'Tail connects to second node, creating a cycle.' },
+      { input: 'head=[1,2], pos=-1', output: 'false', explanation: 'No cycle exists.' }
     ],
-    solution: 'def mergeTwoLists(l1, l2):\n    dummy=cur=ListNode(0)\n    while l1 and l2:\n        if l1.val<=l2.val: cur.next=l1;l1=l1.next\n        else: cur.next=l2;l2=l2.next\n        cur=cur.next\n    cur.next=l1 or l2\n    return dummy.next',
-    time_complexity: 'O(m+n)', space_complexity: 'O(1)',
-    companies: ['Amazon', 'Microsoft', 'Apple']
+    hints: [
+      'Imagine two runners on a circular track: one slow, one fast. They will meet if there is a cycle.',
+      'Use Floyd\'s Tortoise and Hare algorithm: slow moves 1 step, fast moves 2 steps.',
+      'If fast or fast.next becomes None, no cycle. If slow ever equals fast, a cycle exists.'
+    ],
+    solution: 'def hasCycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n        if slow == fast:\n            return True\n    return False',
+    time_complexity: 'O(n)',
+    space_complexity: 'O(1)',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft']
   },
   {
-    id: 'linked_lists-003', title: 'LRU Cache', topic: 'linked_lists', difficulty: 'Hard',
-    description: 'Design a data structure that follows the Least Recently Used cache constraint. Implement get(key) and put(key, value) — both must run in O(1).',
-    examples: [{ input: 'LRUCache(2), put(1,1), put(2,2), get(1)→1, put(3,3) evicts 2, get(2)→-1', output: '' }],
-    hints: [
-      'You need O(1) lookup AND O(1) ordering by recency — combine a hashmap with a doubly linked list.',
-      'Hashmap maps key → node. Doubly linked list maintains order: most recent at head, least recent at tail.',
-      'get: move node to head. put: add to head, if over capacity remove tail node and delete from hashmap.'
+    id: 'linked_lists-003',
+    title: 'Merge K Sorted Lists',
+    topic: 'linked_lists',
+    difficulty: 'Hard',
+    description: 'Given an array of k sorted linked lists, merge them into one sorted linked list and return the new head. Each list is sorted in ascending order.',
+    examples: [
+      { input: 'lists=[[1,4,5],[1,3,4],[2,6]]', output: '[1,1,2,3,4,4,5,6]', explanation: 'All lists merged into one sorted list.' },
+      { input: 'lists=[]', output: 'null', explanation: 'Empty input.' }
     ],
-    solution: 'class LRUCache:\n    def __init__(self,capacity):\n        self.cap=capacity; self.cache={}\n        self.head,self.tail=Node(0,0),Node(0,0)\n        self.head.next=self.tail; self.tail.prev=self.head\n    def _remove(self,node):\n        node.prev.next=node.next; node.next.prev=node.prev\n    def _insert(self,node):\n        node.next=self.head.next; node.prev=self.head\n        self.head.next.prev=node; self.head.next=node\n    def get(self,key):\n        if key not in self.cache: return -1\n        self._remove(self.cache[key]); self._insert(self.cache[key]); return self.cache[key].val\n    def put(self,key,val):\n        if key in self.cache: self._remove(self.cache[key])\n        self.cache[key]=Node(key,val); self._insert(self.cache[key])\n        if len(self.cache)>self.cap: lru=self.tail.prev; self._remove(lru); del self.cache[lru.key]',
-    time_complexity: 'O(1) get and put', space_complexity: 'O(capacity)',
-    companies: ['Amazon', 'Google', 'Microsoft', 'Facebook']
+    hints: [
+      'You need to repeatedly pick the smallest current element among k lists.',
+      'A min-heap efficiently finds the smallest element. Push the head of each non-empty list.',
+      'Push node to heap, then push its next node. Pop smallest, add to result, continue until heap empty.'
+    ],
+    solution: 'import heapq\ndef mergeKLists(lists):\n    heap = []\n    for i, lst in enumerate(lists):\n        if lst:\n            heapq.heappush(heap, (lst.val, i, lst))\n    dummy = cur = ListNode(0)\n    while heap:\n        val, i, node = heapq.heappop(heap)\n        cur.next = node\n        cur = cur.next\n        if node.next:\n            heapq.heappush(heap, (node.next.val, i, node.next))\n    return dummy.next',
+    time_complexity: 'O(N log k)',
+    space_complexity: 'O(k)',
+    companies: ['Amazon', 'Google', 'Meta', 'Microsoft']
   },
 
 ];
@@ -428,8 +638,7 @@ async function seed() {
     console.error('Seed failed:', error.message);
     process.exit(1);
   }
-  console.log(`Successfully seeded ${problems.length} problems across 10 DSA topics.`);
-  console.log('Topics: arrays, trees, graphs, dp, recursion, sorting, searching, strings, heaps, linked_lists');
+  console.log(`Successfully seeded ${problems.length} problems.`);
 }
 
 seed();

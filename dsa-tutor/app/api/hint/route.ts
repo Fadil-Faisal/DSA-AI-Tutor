@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     `;
 
     const { result: aiRaw, source } = await withFallback(
-      () => ollamaChatJSON([{ role: 'user', content: prompt }]),
+      () => ollamaChatJSON(persona, prompt),
       async () => {
         const completion = await groq.chat.completions.create({
           model: GROQ_FAST,

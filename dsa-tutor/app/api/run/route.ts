@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       `;
 
       const { result: feedbackRaw } = await withFallback(
-        () => ollamaChatJSON([{ role: 'user', content: feedbackPrompt }]),
+        () => ollamaChatJSON(persona, feedbackPrompt),
         async () => {
           const completion = await groq.chat.completions.create({
             model: GROQ_FAST,
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
     `;
 
     const { result: evalRaw, source } = await withFallback(
-      () => ollamaChatJSON([{ role: 'user', content: evalPrompt }]),
+      () => ollamaChatJSON(persona, evalPrompt),
       async () => {
         const completion = await groq.chat.completions.create({
           model: GROQ_FAST,
