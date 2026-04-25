@@ -1,0 +1,315 @@
+{
+  "info": {
+    "name": "DSA Tutor Agent",
+    "description": "Complete API collection for the Adaptive DSA Tutor Agent - Phase 4",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "BASE_URL", "value": "http://localhost:3000" },
+    { "key": "SESSION_ID", "value": "test-session-001" },
+    { "key": "ROOM_CODE", "value": "" },
+    { "key": "ROOM_ID", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "🧠 Agent",
+      "item": [
+        {
+          "name": "POST /api/agent - Get Next Problem",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/agent",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"explanationMode\": \"simple\",\n  \"confidence\": {\n    \"arrays\": 0.5, \"trees\": 0.3, \"graphs\": 0.2,\n    \"dp\": 0.4, \"recursion\": 0.6, \"sorting\": 0.5,\n    \"searching\": 0.5, \"strings\": 0.5, \"heaps\": 0.3, \"linked_lists\": 0.4\n  },\n  \"lastAttempt\": {\n    \"problemId\": \"arrays-001\",\n    \"topic\": \"arrays\",\n    \"correct\": false,\n    \"timeTaken\": 180,\n    \"mistakePattern\": \"off_by_one\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Has problem\", () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('problem');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/agent/multiplayer - Multiplayer Agent",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/agent/multiplayer",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{ROOM_ID}}\",\n  \"playerOneSessionId\": \"{{SESSION_ID}}\",\n  \"playerTwoSessionId\": \"test-session-002\",\n  \"explanationMode\": \"simple\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "✅ Evaluate",
+      "item": [
+        {
+          "name": "POST /api/evaluate - Correct Solution",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/evaluate",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"problemId\": \"arrays-001\",\n  \"code\": \"def twoSum(nums, target):\\\\n    seen = {}\\\\n    for i, n in enumerate(nums):\\\n        if target - n in seen:\\\\n            return [seen[target-n], i]\\\n        seen[n] = i\",\n  \"language\": \"python\",\n  \"explanationMode\": \"simple\",\n  \"timeTaken\": 95,\n  \"attemptsCount\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Correct flag exists\", () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('correct');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/evaluate - Wrong Solution",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/evaluate",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"problemId\": \"arrays-001\",\n  \"code\": \"def twoSum(nums, target):\\\\n    return []\",\n  \"language\": \"python\",\n  \"explanationMode\": \"simple\",\n  \"timeTaken\": 60,\n  \"attemptsCount\": 2\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💡 Hints",
+      "item": [
+        {
+          "name": "POST /api/hint - Level 1",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/hint",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"problemId\": \"arrays-001\",\n  \"hintLevel\": 1,\n  \"explanationMode\": \"simple\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Execute",
+      "item": [
+        {
+          "name": "POST /api/execute - Python Hello World",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/execute",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"print('Hello, World!')\",\n  \"language\": \"python\",\n  \"testCases\": [{\"input\": \"\", \"expectedOutput\": \"Hello, World!\"}]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Has results array\", () => {",
+                  "  pm.expect(pm.response.json().results).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏠 Rooms",
+      "item": [
+        {
+          "name": "POST /api/rooms - Create Collaborative Room",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/rooms",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"mode\": \"collaborative\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Has roomCode\", () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.roomCode).to.be.a('string').with.lengthOf(6);",
+                  "  pm.collectionVariables.set(\"ROOM_CODE\", json.roomCode);",
+                  "  pm.collectionVariables.set(\"ROOM_ID\", json.roomId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/rooms - Join Room",
+          "request": {
+            "method": "PATCH",
+            "url": "{{BASE_URL}}/api/rooms",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomCode\": \"{{ROOM_CODE}}\",\n  \"sessionId\": \"test-session-002\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Status is active\", () => {",
+                  "  pm.expect(pm.response.json().status).to.equal(\"active\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/rooms - Get Room State",
+          "request": {
+            "method": "GET",
+            "url": "{{BASE_URL}}/api/rooms?roomCode={{ROOM_CODE}}"
+          }
+        },
+        {
+          "name": "PUT /api/rooms - Update Code",
+          "request": {
+            "method": "PUT",
+            "url": "{{BASE_URL}}/api/rooms",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{ROOM_ID}}\",\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"currentCode\": \"def solution(nums):\\\\n    pass\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎓 Quiz",
+      "item": [
+        {
+          "name": "GET /api/quiz - Fetch Questions",
+          "request": {
+            "method": "GET",
+            "url": "{{BASE_URL}}/api/quiz"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"5 questions returned\", () => {",
+                  "  pm.expect(pm.response.json().questions).to.have.lengthOf(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/quiz - Submit Quiz",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/quiz",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"explanationMode\": \"simple\",\n  \"answers\": [\n    {\"questionId\": \"q1\", \"topic\": \"arrays\", \"selectedOption\": \"B\", \"timeTaken\": 15},\n    {\"questionId\": \"q2\", \"topic\": \"trees\", \"selectedOption\": \"A\", \"timeTaken\": 22},\n    {\"questionId\": \"q3\", \"topic\": \"recursion\", \"selectedOption\": \"C\", \"timeTaken\": 18},\n    {\"questionId\": \"q4\", \"topic\": \"graphs\", \"selectedOption\": \"B\", \"timeTaken\": 40},\n    {\"questionId\": \"q5\", \"topic\": \"dp\", \"selectedOption\": \"B\", \"timeTaken\": 35}\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"overallScore is 5\", () => {",
+                  "  pm.expect(pm.response.json().overallScore).to.equal(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🎤 Interview",
+      "item": [
+        {
+          "name": "POST /api/interview - Get Follow-up Question",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/interview",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"problemTitle\": \"Two Sum\",\n  \"problemTopic\": \"arrays\",\n  \"explanationMode\": \"simple\",\n  \"stage\": \"1\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/interview/feedback - Get Performance Report",
+          "request": {
+            "method": "POST",
+            "url": "{{BASE_URL}}/api/interview/feedback",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{SESSION_ID}}\",\n  \"explanationMode\": \"simple\",\n  \"problems\": [\n    {\"id\": \"arrays-001\", \"code\": \"def twoSum(nums, target):...\", \"timeTaken\": 420, \"followUpAnswers\": [\"I'd use a hash map\", \"O(n) time, O(n) space\"]}\n  ],\n  \"totalTime\": 2700\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Learner",
+      "item": [
+        {
+          "name": "GET /api/learner - Fetch Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{BASE_URL}}/api/learner?sessionId={{SESSION_ID}}"
+          }
+        }
+      ]
+    }
+  ]
+}
