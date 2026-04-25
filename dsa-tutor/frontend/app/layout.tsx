@@ -9,12 +9,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'NeuralDSA — Adaptive AI Tutor Agent',
+  title: 'LhamaLearns — Adaptive AI Tutor Agent',
   description:
     'An autonomous AI agent that builds a real-time cognitive model of each student. Tracks every answer, hesitation, and wrong turn — then decides what to teach next.',
   keywords: ['DSA', 'AI Tutor', 'Algorithm', 'Data Structures', 'Adaptive Learning', 'AAYAM 2026'],
   openGraph: {
-    title: 'NeuralDSA — Adaptive AI Tutor Agent',
+    title: 'LhamaLearns — Adaptive AI Tutor Agent',
     description: 'Your personal AI-powered DSA coach',
     type: 'website',
   },

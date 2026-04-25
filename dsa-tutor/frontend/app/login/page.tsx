@@ -230,16 +230,6 @@ export default function LoginPage() {
                 <Brain size={26} color="white" />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.15 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 99, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#93c5fd', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 16 }}
-              >
-                <Sparkles size={11} />
-                AAYAM 2026 Hackathon
-              </motion.div>
-
               <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 26, fontWeight: 800, color: '#f1f5f9', marginBottom: 8, letterSpacing: '-0.02em' }}>
                 Welcome back
               </h1>
@@ -341,7 +331,7 @@ export default function LoginPage() {
             {/* Divider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
               <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)' }} />
-              <span style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>New to NeuralDSA?</span>
+              <span style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>New to LhamaLearns?</span>
               <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)' }} />
             </div>
 
@@ -350,10 +340,6 @@ export default function LoginPage() {
             </a>
           </div>
 
-          {/* Footer note */}
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#1e293b' }}>
-            AAYAM 2026 · Track 1: Build an AI Agent
-          </p>
         </motion.div>
       </main>
 

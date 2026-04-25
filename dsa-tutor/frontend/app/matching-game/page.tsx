@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowLeft, Brain, Sparkles, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, Brain, Sparkles, RefreshCcw, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // Python Basics Matching Pairs
@@ -31,6 +31,7 @@ export default function MatchingGamePage() {
   const [matches, setMatches] = useState(0);
   const [moves, setMoves] = useState(0);
   const [isWon, setIsWon] = useState(false);
+  const [justMatchedPairId, setJustMatchedPairId] = useState<string | null>(null);
 
   // Initialize game
   const initGame = () => {
@@ -48,6 +49,7 @@ export default function MatchingGamePage() {
     setMatches(0);
     setMoves(0);
     setIsWon(false);
+    setJustMatchedPairId(null);
   };
 
   useEffect(() => {
@@ -75,8 +77,10 @@ export default function MatchingGamePage() {
         setTimeout(() => setMoves(m => m + 1), 0);
 
         if (newFlipped[0].pairId === newFlipped[1].pairId) {
-          // It's a match!
+          // It's a match! Mark both as matched and keep them flipped
           setTimeout(() => setMatches(m => m + 1), 0);
+          setJustMatchedPairId(newFlipped[0].pairId);
+          setTimeout(() => setJustMatchedPairId(null), 800);
           return newCards.map(c => 
             (c.id === newFlipped[0].id || c.id === newFlipped[1].id)
               ? { ...c, isMatched: true, isFlipped: true }
@@ -99,8 +103,9 @@ export default function MatchingGamePage() {
   };
 
   useEffect(() => {
+    // Only win when ALL pairs are matched (all 6 pairs = all 12 cards flipped green)
     if (matches === PAIRS.length && PAIRS.length > 0) {
-      setIsWon(true);
+      setTimeout(() => setIsWon(true), 600);
       localStorage.setItem('completed_game_1', 'true');
     }
   }, [matches]);
@@ -131,13 +136,15 @@ export default function MatchingGamePage() {
         </div>
         <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, display: 'flex', gap: 16 }}>
           <span>Moves: {moves}</span>
-          <span>Matches: {matches} / {PAIRS.length}</span>
+          <span style={{ color: matches === PAIRS.length ? '#34d399' : '#94a3b8' }}>
+            Matches: {matches} / {PAIRS.length}
+          </span>
         </div>
       </nav>
 
       {/* Main Game Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        
+
         {!isWon ? (
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16,
@@ -145,18 +152,26 @@ export default function MatchingGamePage() {
           }}>
             {cards.map(card => {
               const isFlipped = card.isFlipped || card.isMatched;
+              const isJustMatched = card.pairId === justMatchedPairId;
+
               return (
                 <div key={card.id} style={{ perspective: 1000, aspectRatio: '1/1' }}>
                   <motion.div
                     onClick={() => handleCardClick(card.id)}
-                    animate={{ rotateY: isFlipped ? 180 : 0, opacity: card.isMatched ? 0.9 : 1 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                    animate={{
+                      rotateY: isFlipped ? 180 : 0,
+                      scale: isJustMatched ? [1, 1.08, 1] : 1,
+                    }}
+                    transition={{
+                      rotateY: { type: 'spring', stiffness: 260, damping: 20 },
+                      scale: { duration: 0.4 },
+                    }}
                     style={{
                       width: '100%', height: '100%', position: 'relative',
                       transformStyle: 'preserve-3d', cursor: card.isMatched ? 'default' : 'pointer',
                     }}
                   >
-                    {/* Front of card (hidden when flipped) */}
+                    {/* ── Front of card (face-down / question mark) ── */}
                     <div style={{
                       position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
                       background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9))',
@@ -167,28 +182,65 @@ export default function MatchingGamePage() {
                       <Brain size={28} color="#475569" />
                     </div>
 
-                    {/* Back of card (visible when flipped) */}
+                    {/* ── Back of card (face-up / content) ── */}
                     <div style={{
                       position: 'absolute', inset: 0, backfaceVisibility: 'hidden',
-                      background: card.isMatched 
-                        ? 'linear-gradient(135deg, #10b981, #059669)'
-                        : card.type === 'concept' ? 'linear-gradient(135deg, #2563eb, #3b82f6)' : 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+                      // Matched = solid green gradient; unmatched flipped = blue/purple
+                      background: card.isMatched
+                        ? 'linear-gradient(135deg, #059669, #10b981)'
+                        : card.type === 'concept'
+                        ? 'linear-gradient(135deg, #2563eb, #3b82f6)'
+                        : 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
                       border: `2px solid ${card.isMatched ? '#34d399' : card.type === 'concept' ? '#60a5fa' : '#a78bfa'}`,
-                      borderRadius: 16, transform: 'rotateY(180deg)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: 12, textAlign: 'center',
-                      boxShadow: card.isMatched 
-                        ? '0 0 32px rgba(16,185,129,0.5)' 
+                      borderRadius: 16,
+                      transform: 'rotateY(180deg)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      padding: 10, textAlign: 'center',
+                      boxShadow: card.isMatched
+                        ? '0 0 32px rgba(16,185,129,0.6), 0 0 64px rgba(16,185,129,0.2)'
                         : `0 0 24px ${card.type === 'concept' ? 'rgba(59,130,246,0.4)' : 'rgba(139,92,246,0.4)'}`,
+                      gap: 6,
                     }}>
+                      {/* Green checkmark badge on matched cards */}
+                      {card.isMatched && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.15, type: 'spring', stiffness: 300 }}
+                          style={{
+                            width: 22, height: 22, borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <CheckCircle2 size={14} color="white" strokeWidth={2.5} />
+                        </motion.div>
+                      )}
+
                       <span style={{
-                        fontSize: card.type === 'match' ? 14 : 15,
+                        fontSize: card.type === 'match' ? 13 : 14,
                         fontWeight: 700, color: 'white',
                         fontFamily: card.type === 'match' ? 'JetBrains Mono, monospace' : 'Inter, sans-serif',
-                        wordBreak: 'break-word',
+                        wordBreak: 'break-word', lineHeight: 1.3,
                       }}>
                         {card.content}
                       </span>
+
+                      {/* "Matched!" label */}
+                      {card.isMatched && (
+                        <motion.span
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.25 }}
+                          style={{
+                            fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.8)',
+                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                          }}
+                        >
+                          Matched!
+                        </motion.span>
+                      )}
                     </div>
                   </motion.div>
                 </div>
@@ -213,10 +265,13 @@ export default function MatchingGamePage() {
               <Sparkles size={32} color="white" />
             </div>
             <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 28, fontWeight: 900, marginBottom: 12 }}>
-              Level Completed!
+              All Pairs Matched! 🎉
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: 15, marginBottom: 32 }}>
-              You matched all Python basic types in <strong>{moves}</strong> moves.
+            <p style={{ color: '#94a3b8', fontSize: 15, marginBottom: 8 }}>
+              You matched all {PAIRS.length} pairs in <strong>{moves}</strong> moves.
+            </p>
+            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 32 }}>
+              Every card is green — time to put your skills to work!
             </p>
             
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
@@ -227,13 +282,13 @@ export default function MatchingGamePage() {
               }}>
                 <RefreshCcw size={16} /> Replay
               </button>
-              <button onClick={() => router.push('/roadmap')} style={{
+              <button onClick={() => router.push('/session')} style={{
                 padding: '12px 24px', borderRadius: 14,
-                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                background: 'linear-gradient(135deg, #059669, #10b981)',
                 color: 'white', fontSize: 14, fontWeight: 700,
-                border: 'none', cursor: 'pointer', boxShadow: '0 0 24px rgba(99,102,241,0.3)',
+                border: 'none', cursor: 'pointer', boxShadow: '0 0 24px rgba(16,185,129,0.4)',
               }}>
-                Continue Roadmap →
+                Start Solving Problems →
               </button>
             </div>
           </motion.div>
