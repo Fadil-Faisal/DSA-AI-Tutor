@@ -389,7 +389,7 @@ export default function MainMenuPage() {
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => router.push('/session')}
+              onClick={() => router.push('/roadmap')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 12,
                 padding: '16px 48px', borderRadius: 16,
