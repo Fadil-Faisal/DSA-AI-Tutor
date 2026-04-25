@@ -19,6 +19,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'explanationMode must be "simple" or "complex"' }, { status: 400 });
     }
 
+    const learningProfile = await supabaseServer
+      .from('learning_profiles')
+      .select('videos_watched, concept_scores')
+      .eq('session_id', sessionId)
+      .single();
+
+    const videosWatched = learningProfile.data?.videos_watched?.length ?? 0;
+    const conceptsPassed = Object.values(learningProfile.data?.concept_scores ?? {})
+      .filter((score) => (score as number) >= 0.6).length;
+
+    if (videosWatched < 3 || conceptsPassed < 3) {
+      return NextResponse.json({
+        redirect: true,
+        message: 'Complete at least 3 video lessons and concept quizzes first.',
+        suggestedRoute: '/api/agent/next-step',
+        videosWatched,
+        conceptsPassed,
+        required: 3
+      }, { status: 200 });
+    }
+
     const weakestTopic = Object.entries(confidence as Record<string, number>)
       .sort(([, a], [, b]) => a - b)[0][0];
 
