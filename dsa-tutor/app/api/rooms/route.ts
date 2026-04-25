@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
     const { data: members } = await supabaseServer
       .from('room_members')
-      .select('session_id, role, current_code, status')
+      .select('session_id, role, username, current_code, status')
       .eq('room_id', room.id);
 
     return NextResponse.json({
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, mode } = await req.json();
+    const { sessionId, mode, username } = await req.json();
 
     if (!sessionId || !mode) {
       return NextResponse.json({ error: 'Missing required fields: sessionId, mode' }, { status: 400 });
@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
     await supabaseServer.from('room_members').insert({
       room_id: room.id,
       session_id: sessionId,
+      username: username || null,
       role: 'player_one',
       current_code: '',
       status: 'active',
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { roomCode, sessionId } = await req.json();
+    const { roomCode, sessionId, username } = await req.json();
 
     if (!roomCode || roomCode.length !== 6) {
       return NextResponse.json({ error: 'roomCode must be 6 characters' }, { status: 400 });
@@ -161,21 +162,18 @@ export async function PATCH(req: NextRequest) {
     await supabaseServer.from('room_members').insert({
       room_id: room.id,
       session_id: sessionId,
+      username: username || null,
       role,
       current_code: '',
       status: 'active',
     });
 
-    await supabaseServer
-      .from('rooms')
-      .update({ status: 'active' })
-      .eq('id', room.id);
-
+    // Do NOT auto-start — host must explicitly call /api/rooms/start
     return NextResponse.json({
       roomId: room.id,
       roomCode: room.room_code,
       mode: room.mode,
-      status: 'active',
+      status: 'waiting',
       role,
       currentProblemId: room.current_problem_id,
     });
@@ -218,6 +216,44 @@ export async function PUT(req: NextRequest) {
 
   } catch (error: unknown) {
     console.error('[/api/rooms PUT] Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/rooms?roomCode=XXXX
+ * Called when any player leaves — marks the room as 'finished' so all
+ * Realtime subscribers (the remaining player) receive the status change
+ * and can redirect away.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const roomCode = req.nextUrl.searchParams.get('roomCode');
+    if (!roomCode) {
+      return NextResponse.json({ error: 'roomCode required' }, { status: 400 });
+    }
+
+    const { data: room } = await supabaseServer
+      .from('rooms')
+      .select('id, status')
+      .eq('room_code', roomCode)
+      .single();
+
+    if (!room) {
+      return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    }
+
+    // Only close rooms that aren't already finished
+    if (room.status !== 'finished') {
+      await supabaseServer
+        .from('rooms')
+        .update({ status: 'finished' })
+        .eq('id', room.id);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error('[/api/rooms DELETE] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
