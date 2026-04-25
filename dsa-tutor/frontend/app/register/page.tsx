@@ -210,7 +210,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) router.push('/');
+    if (!authLoading && user) router.push('/main-menu');
   }, [user, authLoading, router]);
 
   const validate = () => {

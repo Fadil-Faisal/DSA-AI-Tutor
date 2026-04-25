@@ -124,9 +124,9 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; global?: string }>({});
   const [success, setSuccess] = useState(false);
 
-  // If already logged in, redirect home
+  // If already logged in, redirect to main menu
   useEffect(() => {
-    if (!authLoading && user) router.push('/');
+    if (!authLoading && user) router.push('/main-menu');
   }, [user, authLoading, router]);
 
   const validate = () => {

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Zap, Target, Users, ChevronRight, CheckCircle, XCircle, Clock, Flame, BarChart3, Code2, Sparkles, GraduationCap, BookOpen, Trophy } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { ExplanationMode, DSATopic } from '@/types/learner';
+import { useAuth } from '@/hooks/useAuth';
 
 // ── Neural Canvas ─────────────────────────────────────────────────────────
 function NeuralCanvas() {
@@ -54,11 +55,11 @@ function NeuralCanvas() {
 
 // ── Quiz data ─────────────────────────────────────────────────────────────
 const QUIZ = [
-  { topic: 'arrays' as DSATopic, q: 'Time complexity to search an unsorted array?', opts: ['O(1)', 'O(log n)', 'O(n)', 'O(n²)'], correct: 2 },
-  { topic: 'trees' as DSATopic, q: 'Inorder traversal of a BST gives?', opts: ['Random', 'Ascending', 'Descending', 'Level-by-level'], correct: 1 },
-  { topic: 'graphs' as DSATopic, q: 'Shortest path in unweighted graph?', opts: ['DFS', 'Dijkstra', 'BFS', "Prim's"], correct: 2 },
-  { topic: 'recursion' as DSATopic, q: 'What prevents infinite recursion?', opts: ['A loop', 'Base case', 'Return type', 'Global state'], correct: 1 },
-  { topic: 'dp' as DSATopic, q: 'Dynamic programming best applies when?', opts: ['No repetition', 'Overlapping subproblems', 'One solution', 'Linear only'], correct: 1 },
+  { topic: 'arrays' as DSATopic, q: 'How do you print in Python?', opts: ['print()', 'echo()', 'console.log()', 'printf()'], correct: 0 },
+  { topic: 'arrays' as DSATopic, q: 'Which creates a list in Python?', opts: ['[1,2,3]', '(1,2,3)', '{1,2,3}', '<1,2,3>'], correct: 0 },
+  { topic: 'arrays' as DSATopic, q: 'How do you get list length?', opts: ['len()', 'size()', 'length()', 'count()'], correct: 0 },
+  { topic: 'recursion' as DSATopic, q: 'Which is a comment in Python?', opts: ['# comment', '// comment', '/* comment */', '-- comment'], correct: 0 },
+  { topic: 'dp' as DSATopic, q: 'How do you define a function?', opts: ['def', 'function', 'func', 'void'], correct: 0 },
 ];
 
 // ── Onboarding Quiz ───────────────────────────────────────────────────────
@@ -164,6 +165,7 @@ type Step = 'hero' | 'mode' | 'quiz';
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState<Step>('hero');
   const [selectedMode, setSelectedMode] = useState<ExplanationMode | null>(null);
   const { setExplanationMode, setConfidenceFromQuiz } = useLearnerStore();
@@ -204,14 +206,23 @@ export default function LandingPage() {
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 56 }}>
-                <button onClick={() => router.push('/register')}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 0 40px rgba(59,130,246,0.35)', letterSpacing: '-0.01em' }}>
-                  <Brain size={20} /> Get Started <ChevronRight size={18} />
-                </button>
-                <button onClick={() => router.push('/login')}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: 16, fontWeight: 600, border: '1px solid rgba(148,163,184,0.2)', cursor: 'pointer' }}>
-                  <BarChart3 size={18} /> Sign In
-                </button>
+                {!authLoading && user ? (
+                  <button onClick={() => router.push('/main-menu')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 0 40px rgba(59,130,246,0.35)', letterSpacing: '-0.01em' }}>
+                    <Brain size={20} /> Go to Main Menu <ChevronRight size={18} />
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => router.push('/register')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 0 40px rgba(59,130,246,0.35)', letterSpacing: '-0.01em' }}>
+                      <Brain size={20} /> Get Started <ChevronRight size={18} />
+                    </button>
+                    <button onClick={() => router.push('/login')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', fontSize: 16, fontWeight: 600, border: '1px solid rgba(148,163,184,0.2)', cursor: 'pointer' }}>
+                      <BarChart3 size={18} /> Sign In
+                    </button>
+                  </>
+                )}
               </motion.div>
 
               {/* Feature grid */}
