@@ -40,11 +40,40 @@ const DEMO_PROBLEM: Problem = {
   companies: ['Google', 'Amazon', 'Meta', 'Apple'],
 };
 
+const PROBLEM_2 = {
+  id: 'arrays-002',
+  title: 'Best Time to Buy & Sell Stock',
+  topic: 'arrays',
+  difficulty: 'Easy',
+  description:
+    'You are given an array prices where prices[i] is the price of a given stock on the i-th day.\n\nYou want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return 0.',
+  examples: [
+    { input: '[7,1,5,3,6,4]', output: '5', explanation: 'Buy on day 2 (price=1) and sell on day 5 (price=6), profit = 6-1 = 5' },
+    { input: '[7,6,4,3,1]', output: '0', explanation: 'No profit possible — prices fall every day' },
+  ],
+  hints: [
+    'Track the minimum price seen so far as you iterate.',
+    'At each day, calculate profit = current price - min price seen so far.',
+    'Keep updating the maximum profit found.',
+  ],
+  solution: '',
+  time_complexity: 'O(n)',
+  space_complexity: 'O(1)',
+  companies: ['Amazon', 'Bloomberg', 'Microsoft', 'Google'],
+};
+
+const STARTER_CODE_2: Record<ProgrammingLanguage, string> = {
+  python: 'import json\n\nprices = json.loads(input().strip())\n\ndef maxProfit(prices):\n    min_price = float("inf")\n    max_profit = 0\n    for price in prices:\n        if price < min_price:\n            min_price = price\n        elif price - min_price > max_profit:\n            max_profit = price - min_price\n    return max_profit\n\nprint(maxProfit(prices))',
+  javascript: 'const readline = require("readline");\nconst rl = readline.createInterface({ input: process.stdin });\nrl.on("line", (line) => {\n  const prices = JSON.parse(line);\n  let minPrice = Infinity, maxProfit = 0;\n  for (const p of prices) {\n    if (p < minPrice) minPrice = p;\n    else if (p - minPrice > maxProfit) maxProfit = p - minPrice;\n  }\n  console.log(maxProfit);\n});',
+  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String line = sc.nextLine().replace("[","").replace("]","").trim();\n        int[] prices = Arrays.stream(line.split(",")).map(String::trim).mapToInt(Integer::parseInt).toArray();\n        int minPrice = Integer.MAX_VALUE, maxProfit = 0;\n        for (int p : prices) {\n            if (p < minPrice) minPrice = p;\n            else if (p - minPrice > maxProfit) maxProfit = p - minPrice;\n        }\n        System.out.println(maxProfit);\n    }\n}',
+  cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    stringstream ss(line.substr(1, line.size()-2));\n    vector<int> prices;\n    string num;\n    while (getline(ss, num, \'\',\')) prices.push_back(stoi(num));\n    int minPrice = INT_MAX, maxProfit = 0;\n    for (int p : prices) {\n        if (p < minPrice) minPrice = p;\n        else if (p - minPrice > maxProfit) maxProfit = p - minPrice;\n    }\n    cout << maxProfit;\n    return 0;\n}',
+};
+
 const STARTER_CODE: Record<ProgrammingLanguage, string> = {
-  python: 'import json\n\nline1 = input().strip()\nnums = json.loads(line1)\ntarget = int(input().strip())\n\ndef twoSum(nums, target):\n    pass\n\nprint(twoSum(nums, target))',
-  javascript: 'const readline = require("readline");\nconst rl = readline.createInterface({ input: process.stdin });\nconst inputs = [];\nrl.on("line", (line) => inputs.push(line));\nrl.on("close", () => {\n  const nums = JSON.parse(inputs[0]);\n  const target = parseInt(inputs[1]);\n  function twoSum(nums, target) { }\n  console.log(JSON.stringify(twoSum(nums, target)));\n});',
-  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String line = sc.nextLine();\n        String numsStr = line.replace("[","").replace("]","").trim();\n        int[] nums = Arrays.stream(numsStr.split(",")).map(String::trim).mapToInt(Integer::parseInt).toArray();\n        int target = sc.nextInt();\n    }\n}',
-  cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    stringstream ss(line.substr(1, line.size()-2));\n    vector<int> nums;\n    string num;\n    while (getline(ss, num, \',\')) nums.push_back(stoi(num));\n    int target; cin >> target;\n    return 0;\n}',
+  python: 'import json\n\nline1 = input().strip()\nnums = json.loads(line1)\ntarget = int(input().strip())\n\ndef twoSum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return [seen[complement], i]\n        seen[num] = i\n    return []\n\nresult = twoSum(nums, target)\nprint("[" + ",".join(str(x) for x in result) + "]")',
+  javascript: 'const readline = require("readline");\nconst rl = readline.createInterface({ input: process.stdin });\nconst inputs = [];\nrl.on("line", (line) => inputs.push(line));\nrl.on("close", () => {\n  const nums = JSON.parse(inputs[0]);\n  const target = parseInt(inputs[1]);\n  function twoSum(nums, target) {\n    const seen = {};\n    for (let i = 0; i < nums.length; i++) {\n      const complement = target - nums[i];\n      if (seen[complement] !== undefined) return [seen[complement], i];\n      seen[nums[i]] = i;\n    }\n    return [];\n  }\n  console.log(JSON.stringify(twoSum(nums, target)));\n});',
+  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String line = sc.nextLine();\n        String numsStr = line.replace("[","").replace("]","").trim();\n        int[] nums = Arrays.stream(numsStr.split(",")).map(String::trim).mapToInt(Integer::parseInt).toArray();\n        int target = Integer.parseInt(sc.nextLine().trim());\n        Map<Integer, Integer> seen = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int complement = target - nums[i];\n            if (seen.containsKey(complement)) {\n                System.out.println("[" + seen.get(complement) + "," + i + "]");\n                return;\n            }\n            seen.put(nums[i], i);\n        }\n    }\n}',
+  cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    stringstream ss(line.substr(1, line.size()-2));\n    vector<int> nums;\n    string num;\n    while (getline(ss, num, \',\')) nums.push_back(stoi(num));\n    int target; cin >> target;\n    unordered_map<int,int> seen;\n    for (int i = 0; i < (int)nums.size(); i++) {\n        int comp = target - nums[i];\n        if (seen.count(comp)) { cout << "[" << seen[comp] << "," << i << "]"; return 0; }\n        seen[nums[i]] = i;\n    }\n    return 0;\n}',
 };
 
 const LANGUAGES: { value: ProgrammingLanguage; label: string }[] = [
@@ -166,6 +195,8 @@ export default function SessionPage() {
       setAgentReasoning('Arrays confidence is your lowest at 50%. Starting with Two Sum to build foundational hash-map intuition before advancing to harder array problems.');
       setDecisionType('next_problem');
     }
+    // Auto-start the timer when the session page loads
+    startTimer();
   }, []);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -231,23 +262,21 @@ export default function SessionPage() {
     setOutputLoading(true);
     setFeedback('');
     setCorrect(null);
+    setResults([]);
 
     const store = useLearnerStore.getState();
     store.incrementAttempts();
 
     try {
-      const res = await fetch('/api/run', {
+      const testCases = currentProblem.examples.map((ex) => ({
+        input: ex.input || '',
+        expectedOutput: ex.output || '',
+      }));
+
+      const res = await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: store.sessionId,
-          problemId: currentProblem.id,
-          code,
-          language,
-          explanationMode: store.explanationMode,
-          timeTaken: store.timerSeconds,
-          attemptsCount: store.attemptsOnCurrentProblem,
-        }),
+        body: JSON.stringify({ code, language, testCases }),
       });
 
       const data = await res.json();
@@ -257,18 +286,17 @@ export default function SessionPage() {
         setResults([]);
         setCorrect(false);
       } else {
-        setResults(data.results || []);
-        setCorrect(data.correct ?? false);
+        const executionResults = data.results || [];
+        setResults(executionResults);
+        const allPassed = data.summary?.allPassed ?? false;
+        setCorrect(allPassed);
 
-        if (data.feedback) {
-          setFeedback(data.feedback);
-        }
-
-        if (data.correct) {
+        if (allPassed) {
+          setFeedback('🎉 All test cases passed! Great work!');
           useLearnerStore.getState().incrementStreak();
           useLearnerStore.getState().addSolvedProblem({
-            problemId: currentProblem.id,
-            topic: currentProblem.topic as any,
+            problemId: freshProblem.id,
+            topic: freshProblem.topic as any,
             correct: true,
             timeTaken: store.timerSeconds,
             timestamp: Date.now(),
@@ -276,22 +304,25 @@ export default function SessionPage() {
           setTimeout(() => {
             setAgentLoading(true);
             setTimeout(() => {
-              setCurrentProblem({ ...DEMO_PROBLEM, id: 'arrays-002', title: 'Best Time to Buy & Sell Stock', difficulty: 'Easy' });
-              setAgentReasoning('You nailed Two Sum! Moving to sliding window — "Best Time to Buy & Sell Stock" continues the array mastery path.');
+              setCurrentProblem(PROBLEM_2 as any);
+              setAgentReasoning('You nailed Two Sum! Moving to greedy — "Best Time to Buy & Sell Stock" trains you to find the optimal single-pass solution.');
               setDecisionType('next_problem');
               setAgentLoading(false);
               setFeedback('');
               setCorrect(null);
               setResults([]);
-              setCode(STARTER_CODE[language]);
+              setCode(STARTER_CODE_2[language]);
               resetTimer();
+              startTimer();
             }, 2000);
           }, 2000);
         } else {
+          const failedCount = executionResults.filter((r: { passed: boolean }) => !r.passed).length;
+          setFeedback(`❌ ${failedCount} of ${testCases.length} test case(s) failed. Check your logic and try again.`);
           useLearnerStore.getState().resetStreak();
           useLearnerStore.getState().addSolvedProblem({
-            problemId: currentProblem.id,
-            topic: currentProblem.topic as any,
+            problemId: freshProblem.id,
+            topic: freshProblem.topic as any,
             correct: false,
             timeTaken: store.timerSeconds,
             timestamp: Date.now(),
@@ -304,10 +335,12 @@ export default function SessionPage() {
     }
 
     setOutputLoading(false);
-  }, [currentProblem, code, language, resetTimer, setAgentLoading, setAgentReasoning, setCurrentProblem, setDecisionType]);
+  }, [currentProblem, code, language, resetTimer, startTimer, setAgentLoading, setAgentReasoning, setCurrentProblem, setDecisionType]);
 
   const handleReset = useCallback(() => {
-    setCode(STARTER_CODE[language]);
+    const activeProblem = useLearnerStore.getState().currentProblem;
+    const isP2 = activeProblem?.id === 'arrays-002';
+    setCode(isP2 ? STARTER_CODE_2[language] : STARTER_CODE[language]);
     setResults([]);
     setFeedback('');
     setCorrect(null);
@@ -332,7 +365,7 @@ export default function SessionPage() {
             <Cpu size={15} color="white" />
           </div>
           <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: '#f8fafc' }}>
-            Neural<span style={{ color: '#60a5fa' }}>DSA</span>
+            Lhama<span style={{ color: '#60a5fa' }}>Learns</span>
           </span>
         </div>
 

@@ -239,7 +239,7 @@ export default function LandingPage() {
               {/* Social proof */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
                 style={{ display: 'flex', gap: 32, justifyContent: 'center', color: '#475569', fontSize: 13 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Flame size={15} color="#f97316" /> 30+ Problems</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Flame size={15} color="#f97316" /> 4 Problems</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={15} color="#eab308" /> 10 Topics</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Users size={15} color="#60a5fa" /> Multiplayer</span>
               </motion.div>
