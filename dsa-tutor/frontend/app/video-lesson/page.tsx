@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowLeft, Brain, CheckCircle2, XCircle, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { useLearnerStore } from '@/store/learnerStore';
 
 // ── Quiz Breakpoints ──────────────────────────────────────────────────────────
 // For a ~2 min video: breakpoints at 30s, 70s, 110s
@@ -189,6 +190,7 @@ function QuizOverlay({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function VideoLessonPage() {
+  const { setCompletedLesson1 } = useLearnerStore();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentQ, setCurrentQ] = useState<Question | null>(null);
   const [triggered, setTriggered] = useState<Set<number>>(new Set());
@@ -239,9 +241,7 @@ export default function VideoLessonPage() {
   const handleEnded = () => {
     setPlaying(false);
     setCompleted(true);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('completed_lesson_1', 'true');
-    }
+    setCompletedLesson1(true);
   };
 
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;

@@ -22,6 +22,7 @@ const DEFAULT_CONFIDENCE: Confidence = {
 interface LearnerStore {
   // Identity
   sessionId: string;
+  userId: string | null;
   userName: string;
   targetCompany: string | null;
 
@@ -55,9 +56,16 @@ interface LearnerStore {
     timestamp: number;
   }>;
 
+  // Roadmap Progress
+  completedLesson1: boolean;
+  completedGame1: boolean;
+
   // Actions
   setSessionId: (id: string) => void;
+  setUserId: (id: string | null) => void;
   setUserName: (name: string) => void;
+  setCompletedLesson1: (val: boolean) => void;
+  setCompletedGame1: (val: boolean) => void;
   setTargetCompany: (company: string | null) => void;
   setExplanationMode: (mode: ExplanationMode) => void;
   updateConfidence: (topic: DSATopic, value: number) => void;
@@ -76,12 +84,14 @@ interface LearnerStore {
   startTimer: () => void;
   tickTimer: () => void;
   resetTimer: () => void;
+  resetEntireStore: () => void;
 }
 
 export const useLearnerStore = create<LearnerStore>()(
   persist(
     immer((set) => ({
       sessionId: typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36),
+      userId: null,
       userName: '',
       targetCompany: null,
       explanationMode: 'simple',
@@ -98,9 +108,14 @@ export const useLearnerStore = create<LearnerStore>()(
       agentLoading: false,
       decisionType: 'next_problem',
       solvedProblems: [],
+      completedLesson1: false,
+      completedGame1: false,
 
       setSessionId: (id) => set((s) => { s.sessionId = id; }),
+      setUserId: (id) => set((s) => { s.userId = id; }),
       setUserName: (name) => set((s) => { s.userName = name; }),
+      setCompletedLesson1: (val) => set((s) => { s.completedLesson1 = val; }),
+      setCompletedGame1: (val) => set((s) => { s.completedGame1 = val; }),
       setTargetCompany: (company) => set((s) => { s.targetCompany = company; }),
       setExplanationMode: (mode) => set((s) => { s.explanationMode = mode; }),
 
@@ -174,11 +189,34 @@ export const useLearnerStore = create<LearnerStore>()(
       startTimer: () => set((s) => { s.timerStarted = true; }),
       tickTimer: () => set((s) => { s.timerSeconds += 1; }),
       resetTimer: () => set((s) => { s.timerSeconds = 0; s.timerStarted = false; }),
+      resetEntireStore: () => set((s) => {
+        s.sessionId = typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36);
+        s.userId = null;
+        s.userName = '';
+        s.targetCompany = null;
+        s.explanationMode = 'simple';
+        s.confidence = { ...DEFAULT_CONFIDENCE };
+        s.currentStreak = 0;
+        s.totalProblemsAttempted = 0;
+        s.currentProblem = null;
+        s.currentHintLevel = 0;
+        s.hintsUsed = 0;
+        s.timerStarted = false;
+        s.timerSeconds = 0;
+        s.attemptsOnCurrentProblem = 0;
+        s.agentReasoning = '';
+        s.agentLoading = false;
+        s.decisionType = 'next_problem';
+        s.solvedProblems = [];
+        s.completedLesson1 = false;
+        s.completedGame1 = false;
+      }),
     })),
     {
       name: 'dsa-tutor-store',
       partialize: (state) => ({
         sessionId: state.sessionId,
+        userId: state.userId,
         userName: state.userName,
         targetCompany: state.targetCompany,
         explanationMode: state.explanationMode,
@@ -186,6 +224,8 @@ export const useLearnerStore = create<LearnerStore>()(
         currentStreak: state.currentStreak,
         totalProblemsAttempted: state.totalProblemsAttempted,
         solvedProblems: state.solvedProblems,
+        completedLesson1: state.completedLesson1,
+        completedGame1: state.completedGame1,
       }),
     }
   )

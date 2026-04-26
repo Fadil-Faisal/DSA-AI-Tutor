@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowLeft, Brain, Sparkles, RefreshCcw, CheckCircle2 } from 'lucide-react';
+import { Sparkles, RefreshCcw, CheckCircle2, Brain } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLearnerStore } from '@/store/learnerStore';
 
 // Python Basics Matching Pairs
 const PAIRS = [
@@ -27,6 +28,7 @@ interface Card {
 
 export default function MatchingGamePage() {
   const router = useRouter();
+  const { setCompletedGame1 } = useLearnerStore();
   const [cards, setCards] = useState<Card[]>([]);
   const [matches, setMatches] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -106,9 +108,9 @@ export default function MatchingGamePage() {
     // Only win when ALL pairs are matched (all 6 pairs = all 12 cards flipped green)
     if (matches === PAIRS.length && PAIRS.length > 0) {
       setTimeout(() => setIsWon(true), 600);
-      localStorage.setItem('completed_game_1', 'true');
+      setCompletedGame1(true);
     }
-  }, [matches]);
+  }, [matches, setCompletedGame1]);
 
   return (
     <div style={{
@@ -126,7 +128,9 @@ export default function MatchingGamePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link href="/roadmap" style={{ color: '#475569', display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <ArrowLeft size={18} />
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            </span>
           </Link>
           <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.15)' }} />
           <Brain size={17} color="#8b5cf6" />

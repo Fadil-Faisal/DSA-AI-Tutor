@@ -219,23 +219,24 @@ export default function RoadmapPage() {
     : storedName || 'Learner';
 
   const [nodes, setNodes] = useState(ROADMAP);
+  const { completedLesson1, completedGame1 } = useLearnerStore();
 
   useEffect(() => {
-    // Dynamic unlocking logic
+    // Dynamic unlocking logic based on user's learnerStore state
     setNodes(prev => prev.map(n => {
-      if (n.id === 1 && localStorage.getItem('completed_lesson_1') === 'true') {
+      if (n.id === 1 && completedLesson1) {
         return { ...n, status: 'completed' };
       }
-      if (n.id === 2 && localStorage.getItem('completed_lesson_1') === 'true') {
+      if (n.id === 2 && completedLesson1) {
         // Unlock node 2 only if 1 is done
-        return { ...n, status: localStorage.getItem('completed_game_1') === 'true' ? 'completed' : 'active' };
+        return { ...n, status: completedGame1 ? 'completed' : 'active' };
       }
-      if (n.id === 3 && localStorage.getItem('completed_game_1') === 'true') {
+      if (n.id === 3 && completedGame1) {
         return { ...n, status: 'active' };
       }
       return n;
     }));
-  }, []);
+  }, [completedLesson1, completedGame1]);
 
   const handleNavigate = (route: string, status: RoadmapNode['status']) => {
     if (status === 'locked') return;
