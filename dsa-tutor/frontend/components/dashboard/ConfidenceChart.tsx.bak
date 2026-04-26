@@ -36,7 +36,7 @@ function buildHistory(confidence: Confidence, solvedProblems: Array<{ timestamp:
 
 interface ConfidenceChartProps {
   confidence: Confidence;
-  solvedProblems?: Array<{ timestamp: number; topic: string; confidence: number; correct: boolean }>;
+  solvedProblems?: Array<{ timestamp?: number; topic?: string; confidence?: number; correct?: boolean }>;
 }
 
 export function ConfidenceChart({ confidence, solvedProblems = [] }: ConfidenceChartProps) {

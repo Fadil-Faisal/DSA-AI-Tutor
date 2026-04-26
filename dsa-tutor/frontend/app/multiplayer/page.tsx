@@ -111,13 +111,13 @@ export default function MultiplayerLobbyPage() {
         background: 'rgba(6,14,30,0.8)', backdropFilter: 'blur(16px)',
         position: 'sticky', top: 0, zIndex: 40,
       }}>
-        <Link href="/session" style={{ color: '#475569', display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+        <Link href="/main-menu" style={{ color: '#475569', display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <ArrowLeft size={18} />
         </Link>
         <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.15)' }} />
         <Brain size={17} color="#60a5fa" />
         <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15 }}>
-          Neural<span style={{ color: '#60a5fa' }}>DSA</span>
+          Lhama<span style={{ color: '#60a5fa' }}>Learns</span>
           <span style={{ color: '#475569', fontWeight: 400, marginLeft: 8 }}>Multiplayer</span>
         </span>
         {userName && (

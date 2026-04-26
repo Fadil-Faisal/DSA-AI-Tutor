@@ -436,7 +436,7 @@ export default function MainMenuPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => router.push('/interview')}
+                onClick={() => router.push('/coming-soon')}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   padding: '12px 28px', borderRadius: 14,

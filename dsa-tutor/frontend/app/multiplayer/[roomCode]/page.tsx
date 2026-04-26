@@ -172,6 +172,7 @@ export default function RoomPage({
   const broadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const broadcastRef = useRef<((code: string) => void) | null>(null);
   const sendHintChannelRef = useRef<{ sendHint: (t: string) => void; unsub: () => void } | null>(null);
+  const statusChannelRef = useRef<{ unsub: () => void } | null>(null);
 
   const isHost = myRole === 'player_one';
   const myMember = members.find(
@@ -254,6 +255,17 @@ export default function RoomPage({
 
     broadcastRef.current = broadcast;
 
+    const statusCh = supabase.channel(`status:${roomCode}`);
+    statusCh
+      .on('broadcast', { event: 'submit' }, ({ payload }) => {
+        setOpponentSubmitted(true);
+        const didWin = !mySubmittedRef.current;
+        setWinner(didWin ? 'opponent' : 'me');
+        setTimeout(() => setPhase('finished'), 1500);
+      })
+      .subscribe();
+    statusChannelRef.current = { unsub: () => supabase.removeChannel(statusCh) };
+
     // Mentor hint channel
     if (roomModeRef.current === 'mentor') {
       const hintCh = supabase.channel(`hints:${roomCode}`);
@@ -287,7 +299,7 @@ export default function RoomPage({
     if (phaseRef.current !== 'finished' && !roomClosedRef.current) {
       await fetch(`/api/rooms?roomCode=${roomCode}`, { method: 'DELETE' }).catch(() => {});
     }
-    router.push('/multiplayer');
+    router.push('/main-menu');
   }, [roomCode, router]);
 
   useEffect(() => {
@@ -334,8 +346,11 @@ export default function RoomPage({
     setMySubmitted(true);
     const didWin = !opponentSubmittedRef.current;
     setWinner(didWin ? 'me' : 'opponent');
-    setTimeout(() => setPhase('finished'), 1000);
-  }, []);
+    
+    statusChannelRef.current?.unsub();
+    supabase.channel(`status:${roomCode}`).send({ type: 'broadcast', event: 'submit', payload: {} });
+    setTimeout(() => setPhase('finished'), 1500);
+  }, [roomCode]);
 
   const opponentSubmittedRef = useRef(opponentSubmitted);
   opponentSubmittedRef.current = opponentSubmitted;
@@ -424,7 +439,7 @@ export default function RoomPage({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569' }}>
           <Brain size={14} color="#60a5fa" />
-          Neural<span style={{ color: '#60a5fa', fontWeight: 700 }}>DSA</span>
+          Neural<span style={{ color: '#60a5fa', fontWeight: 700 }}>LhamaLearns</span>
         </div>
       </header>
 
@@ -949,9 +964,9 @@ export default function RoomPage({
                 alignItems: 'center', justifyContent: 'center', gap: 20, textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: 64 }}>{winner === 'me' ? '🏆' : '⚔️'}</div>
+              <div style={{ fontSize: 64 }}>{winner === 'me' ? '🏆' : '😞'}</div>
               <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 32, fontWeight: 900 }}>
-                {winner === 'me' ? 'You Won!' : 'Opponent Finished First'}
+                {winner === 'me' ? 'You Won!' : 'You Lost'}
               </h2>
               <p style={{ color: '#64748b' }}>
                 Your time:{' '}
@@ -978,20 +993,20 @@ export default function RoomPage({
               </div>
 
               <div style={{ display: 'flex', gap: 12 }}>
-                <Link href="/multiplayer" style={{
+                <Link href="/main-menu" style={{
                   padding: '12px 24px', borderRadius: 12,
                   border: '1px solid rgba(148,163,184,0.2)', color: '#94a3b8',
                   textDecoration: 'none', fontSize: 14, fontWeight: 600,
                   background: 'rgba(255,255,255,0.04)',
                 }}>
-                  New Room
+                  Main Menu
                 </Link>
-                <Link href="/session" style={{
+                <Link href="/multiplayer" style={{
                   padding: '12px 24px', borderRadius: 12,
                   background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
                   color: 'white', textDecoration: 'none', fontSize: 14, fontWeight: 700,
                 }}>
-                  Keep Practicing
+                  New Room
                 </Link>
               </div>
             </motion.div>

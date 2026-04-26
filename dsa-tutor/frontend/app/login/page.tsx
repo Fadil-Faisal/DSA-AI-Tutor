@@ -188,7 +188,7 @@ export default function LoginPage() {
             <Brain size={18} color="white" />
           </div>
           <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 18, color: '#f8fafc', letterSpacing: '-0.02em' }}>
-            Neural<span style={{ color: '#60a5fa' }}>DSA</span>
+            Lhama<span style={{ color: '#60a5fa' }}>Learns</span>
           </span>
         </a>
         <a href="/register" style={{ padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#94a3b8', textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148,163,184,0.1)', transition: 'all 0.2s' }}>

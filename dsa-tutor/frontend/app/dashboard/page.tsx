@@ -6,7 +6,6 @@ import { motion } from 'framer-motion';
 import { Brain, BarChart3, Flame, Target, ArrowLeft, PlayCircle, Trophy, TrendingUp, Loader2 } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { KnowledgeGraph } from '@/components/dashboard/KnowledgeGraph';
-import { ConfidenceChart } from '@/components/dashboard/ConfidenceChart';
 import { StreakHeatmap } from '@/components/dashboard/StreakHeatmap';
 import { TopicStatsTable } from '@/components/dashboard/TopicStatsTable';
 import { getConfidenceColor, topicLabel } from '@/lib/utils';
@@ -108,7 +107,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Brain size={18} color="#60a5fa" />
             <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: '#f8fafc' }}>
-              Neural<span style={{ color: '#60a5fa' }}>DSA</span>
+              Lhama<span style={{ color: '#60a5fa' }}>Learns</span>
               <span style={{ fontWeight: 400, color: '#475569', marginLeft: 8 }}>Dashboard</span>
             </span>
           </div>
@@ -158,12 +157,21 @@ export default function DashboardPage() {
         <motion.div {...fadeUp(0.1)} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 40 }}>
 
           {/* Confidence chart */}
-          <div style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(10,22,40,0.95))', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 16, padding: 24 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 20 }}>
-              Confidence Over Sessions
-            </h3>
-            <ConfidenceChart confidence={confidence} solvedProblems={solvedProblems} />
-          </div>
+          {confidence && (
+            <div style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(10,22,40,0.95))', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 16, padding: 24 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 20 }}>
+                Confidence Scores
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                {Object.entries(confidence).map(([topic, val]) => (
+                  <div key={topic} style={{ padding: '8px 14px', borderRadius: 10, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{topic}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#60a5fa' }}>{Math.round(val * 100)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Weak areas */}
           <div style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(10,22,40,0.95))', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 16, padding: 24 }}>

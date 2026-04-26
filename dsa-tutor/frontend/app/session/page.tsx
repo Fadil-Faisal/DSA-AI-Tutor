@@ -11,7 +11,7 @@ import { ProblemPanel } from '@/components/session/ProblemPanel';
 import { AgentPanel } from '@/components/session/AgentPanel';
 import { OutputPanel } from '@/components/session/OutputPanel';
 import { Badge } from '@/components/ui/GlobalComponents';
-import { Problem } from '@/types/problem';
+import { ExecutionResult, Problem, ProgrammingLanguage } from '@/types/problem';
 import { ExplanationMode } from '@/types/learner';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });

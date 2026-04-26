@@ -5,13 +5,23 @@
 
 import OpenAI from 'openai';
 
-export const ollama = new OpenAI({
-  apiKey: 'ollama',       // Required by OpenAI SDK but ignored by Ollama
-  baseURL: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1',
-});
+let _ollama: OpenAI | undefined;
 
-// phi3:latest — set via OLLAMA_MODEL env var so no code change needed
-// when switching models in the future
+export const getOllama = (): OpenAI => {
+  if (!_ollama) {
+    _ollama = new OpenAI({
+      apiKey: process.env.OLLAMA_API_KEY || 'ollama',
+      baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+    });
+  }
+  return _ollama;
+};
+
+export const ollama = {
+  get chat() { return getOllama().chat; },
+  get models() { return getOllama().models; },
+};
+
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'phi3:latest';
 
 // ─── IMPORTANT: phi3 JSON safety wrapper ───────────────────────────────────
