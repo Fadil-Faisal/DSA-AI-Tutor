@@ -116,6 +116,7 @@ export function ProblemPanel({ problem, loading, explanationMode, sessionId, cur
         explanationMode={explanationMode}
         currentHintLevel={currentHintLevel}
         onHintRequest={onHintRequest}
+        hints={problem.hints ?? []}
       />
     </div>
   );

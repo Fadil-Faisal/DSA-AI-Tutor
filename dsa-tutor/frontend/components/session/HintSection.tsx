@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lightbulb, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/GlobalComponents';
+import { Lightbulb, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HintSectionProps {
@@ -12,21 +11,17 @@ interface HintSectionProps {
   explanationMode: 'simple' | 'complex';
   currentHintLevel: 0 | 1 | 2 | 3;
   onHintRequest: () => void;
+  /** Pass the problem's hints array directly so we don't need an API call */
+  hints?: string[];
 }
 
 const HINT_META = [
-  { level: 1, label: 'Nudge', color: '#94a3b8', desc: 'A small directional clue' },
-  { level: 2, label: 'Approach', color: '#f59e0b', desc: 'High-level strategy revealed' },
+  { level: 1, label: 'Nudge',      color: '#94a3b8', desc: 'A small directional clue' },
+  { level: 2, label: 'Approach',   color: '#f59e0b', desc: 'High-level strategy revealed' },
   { level: 3, label: 'Pseudocode', color: '#3b82f6', desc: 'Near-complete solution outline' },
 ] as const;
 
-interface HintCardProps {
-  level: 1 | 2 | 3;
-  text: string;
-  visible: boolean;
-}
-
-function HintCard({ level, text, visible }: HintCardProps) {
+function HintCard({ level, text }: { level: 1 | 2 | 3; text: string }) {
   const [revealed, setRevealed] = useState(false);
   const meta = HINT_META[level - 1];
 
@@ -36,41 +31,38 @@ function HintCard({ level, text, visible }: HintCardProps) {
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="overflow-hidden"
+      style={{ overflow: 'hidden', marginTop: 8 }}
     >
-      <div
-        className="rounded-xl border p-3.5 mt-2"
-        style={{
-          borderColor: `${meta.color}30`,
-          background: `${meta.color}08`,
-        }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Lightbulb
-              className="w-3.5 h-3.5"
-              style={{ color: meta.color }}
-              aria-hidden
-            />
-            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: meta.color }}>
+      <div style={{
+        borderRadius: 12, padding: '12px 14px',
+        border: `1px solid ${meta.color}30`,
+        background: `${meta.color}08`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Lightbulb size={13} style={{ color: meta.color }} />
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: meta.color }}>
               Hint {level} — {meta.label}
             </span>
           </div>
           <button
-            onClick={() => setRevealed((r) => !r)}
-            className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
-            aria-label={revealed ? 'Hide hint' : 'Reveal hint'}
+            onClick={() => setRevealed(r => !r)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}
+            title={revealed ? 'Hide hint' : 'Reveal hint'}
           >
-            {revealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
         </div>
-        <div className={cn('transition-all duration-300', !revealed && 'blur-sm select-none')}>
-          <p className="text-[13px] text-slate-300 leading-relaxed whitespace-pre-wrap">
-            {text}
-          </p>
+
+        <div style={{
+          filter: revealed ? 'none' : 'blur(4px)',
+          userSelect: revealed ? 'auto' : 'none',
+          transition: 'filter 0.2s',
+        }}>
+          <p style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6, margin: 0 }}>{text}</p>
         </div>
         {!revealed && (
-          <p className="text-[11px] text-slate-600 mt-1">Click eye to reveal</p>
+          <p style={{ fontSize: 11, color: '#334155', marginTop: 4, marginBottom: 0 }}>Click 👁 to reveal</p>
         )}
       </div>
     </motion.div>
@@ -78,107 +70,109 @@ function HintCard({ level, text, visible }: HintCardProps) {
 }
 
 export function HintSection({
-  problemId,
-  sessionId,
   currentHintLevel,
   onHintRequest,
-  explanationMode,
+  hints = [],
 }: HintSectionProps) {
-  const [loading, setLoading] = useState(false);
-  const [hints, setHints] = useState<{ level: number; text: string }[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [revealedHints, setRevealedHints] = useState<{ level: number; text: string }[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleGetHint = useCallback(async () => {
-    if (currentHintLevel >= 3) return;
+  const maxHints = hints.length;
+  const allUsed = currentHintLevel >= maxHints;
+  const nextLevel = (currentHintLevel + 1) as 1 | 2 | 3;
+  const nextMeta = !allUsed ? HINT_META[Math.min(currentHintLevel, 2) as 0 | 1 | 2] : null;
+
+  const handleGetHint = async () => {
+    if (allUsed || loading) return;
     setLoading(true);
-    const nextLevel = currentHintLevel + 1;
 
-    try {
-      const res = await fetch('/api/hint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          problemId,
-          hintLevel: nextLevel,
-          explanationMode,
-          currentCode: null,
-          mistakePattern: null,
-        }),
-      });
-      const data = await res.json();
-      if (data.hint) {
-        setHints((prev) => [...prev, { level: nextLevel, text: data.hint }]);
-      }
-    } catch {
+    // Use the hint text directly from the problem's hints array
+    const hintText = hints[currentHintLevel]; // 0-indexed
+    if (hintText) {
+      // Small artificial delay so it feels like "thinking"
+      await new Promise(r => setTimeout(r, 500));
+      setRevealedHints(prev => [...prev, { level: nextLevel, text: hintText }]);
     }
 
-    onHintRequest();
+    onHintRequest(); // increments the hint level in the store
     setLoading(false);
-  }, [currentHintLevel, onHintRequest, sessionId, problemId, explanationMode]);
-
-  const nextLevel = (currentHintLevel + 1) as 1 | 2 | 3;
-  const nextMeta = currentHintLevel < 3 ? HINT_META[Math.min(currentHintLevel, 2) as 0 | 1 | 2] : null;
+  };
 
   return (
-    <div className="rounded-xl border border-[rgba(148,163,184,0.1)] bg-[rgba(10,22,40,0.5)] overflow-hidden">
+    <div style={{
+      borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)',
+      background: 'rgba(10,22,40,0.5)', overflow: 'hidden',
+    }}>
       {/* Header */}
       <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="w-full flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.02)] transition-colors"
-        aria-expanded={!collapsed}
+        onClick={() => setCollapsed(c => !c)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 14px', cursor: 'pointer',
+          background: 'none', border: 'none', color: 'inherit',
+        }}
       >
-        <div className="flex items-center gap-2">
-          <Lightbulb className="w-3.5 h-3.5 text-amber-400" aria-hidden />
-          <span className="text-xs font-semibold text-slate-300">Hints</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Lightbulb size={14} color="#f59e0b" />
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#cbd5e1' }}>Hints</span>
           {currentHintLevel > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
-              {currentHintLevel}/3 used
+            <span style={{
+              fontSize: 10, padding: '2px 7px', borderRadius: 99,
+              background: 'rgba(245,158,11,0.12)', color: '#f59e0b',
+              border: '1px solid rgba(245,158,11,0.25)', fontWeight: 700,
+            }}>
+              {currentHintLevel}/{maxHints} used
             </span>
           )}
         </div>
         <ChevronDown
-          className={cn('w-3.5 h-3.5 text-slate-500 transition-transform', collapsed && 'rotate-180')}
-          aria-hidden
+          size={13} color="#475569"
+          style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
         />
       </button>
 
       <AnimatePresence>
         {!collapsed && (
           <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            exit={{ height: 0 }}
-            className="overflow-hidden"
+            initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
+            style={{ overflow: 'hidden' }}
           >
-            <div className="px-4 pb-4">
+            <div style={{ padding: '0 14px 14px' }}>
+
               {/* Get Hint Button */}
-              {currentHintLevel < 3 && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={loading}
+              {!allUsed ? (
+                <button
                   onClick={handleGetHint}
-                  className="w-full mb-2"
-                  icon={<Lightbulb className="w-3.5 h-3.5" />}
+                  disabled={loading}
+                  style={{
+                    width: '100%', padding: '9px 14px', borderRadius: 10,
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    background: loading ? 'rgba(245,158,11,0.05)' : 'rgba(245,158,11,0.08)',
+                    color: '#f59e0b', fontSize: 12, fontWeight: 600,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    transition: 'all 0.2s',
+                  }}
                 >
+                  <Lightbulb size={13} />
                   {loading
-                    ? 'Generating hint…'
+                    ? 'Loading hint…'
                     : `Get Hint ${nextLevel}${nextMeta ? ` — ${nextMeta.label}` : ''}`}
-                </Button>
-              )}
-              {currentHintLevel >= 3 && (
-                <p className="text-xs text-slate-500 text-center py-1">All hints revealed</p>
+                </button>
+              ) : (
+                <p style={{ fontSize: 12, color: '#475569', textAlign: 'center', padding: '4px 0', margin: 0 }}>
+                  All {maxHints} hints revealed
+                </p>
               )}
 
-              {/* Revealed Hints */}
+              {/* Revealed Hint Cards */}
               <AnimatePresence>
-                {hints.map((h) => (
+                {revealedHints.map(h => (
                   <HintCard
                     key={h.level}
                     level={h.level as 1 | 2 | 3}
                     text={h.text}
-                    visible
                   />
                 ))}
               </AnimatePresence>

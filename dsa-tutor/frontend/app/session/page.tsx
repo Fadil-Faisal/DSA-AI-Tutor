@@ -2,48 +2,69 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Send, RotateCcw, ChevronDown, Cpu, Flame } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { ProblemPanel } from '@/components/session/ProblemPanel';
 import { AgentPanel } from '@/components/session/AgentPanel';
-import { TimerBar } from '@/components/session/TimerBar';
 import { OutputPanel } from '@/components/session/OutputPanel';
 import { Badge } from '@/components/ui/GlobalComponents';
-import { ExecutionResult, ProgrammingLanguage } from '@/types/problem';
 import { Problem } from '@/types/problem';
 import { ExplanationMode } from '@/types/learner';
-import { cn } from '@/lib/utils';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
-const DEMO_PROBLEM: Problem = {
-  id: 'python-001',
-  title: 'Hello World',
-  topic: 'arrays',
-  difficulty: 'Easy',
-  description:
-    'Write a Python program to print "Hello, World!" to the console.\n\nThis is your first step in Python programming!',
-  examples: [
-    { input: '', output: 'Hello, World!', explanation: 'Using the print() function' },
-  ],
-  hints: [
-    'Use the print() function in Python',
-    'Put the text inside quotes: print("...")',
-    'The exact output should be: Hello, World!',
-  ],
-  solution: 'print("Hello, World!")',
-  time_complexity: 'O(1)',
-  space_complexity: 'O(1)',
-  companies: ['Google', 'Amazon', 'Meta'],
-};
+const DEMO_PROBLEMS: Problem[] = [
+  {
+    id: 'python-001',
+    title: 'Hello World',
+    topic: 'arrays',
+    difficulty: 'Easy',
+    description: 'Write a Python program to print "Hello, World!" to the console.\n\nThis is your first step in Python programming!',
+    examples: [{ input: '', output: 'Hello, World!', explanation: 'Using the print() function' }],
+    hints: ['Use the print() function in Python', 'Put the text inside quotes: print("...")', 'The exact output should be: Hello, World!'],
+    solution: 'print("Hello, World!")',
+    time_complexity: 'O(1)', space_complexity: 'O(1)',
+    companies: ['Google', 'Amazon', 'Meta'],
+  },
+  {
+    id: 'python-002',
+    title: 'Sum of Two Numbers',
+    topic: 'arrays',
+    difficulty: 'Easy',
+    description: 'Write a Python function `add(a, b)` that takes two numbers and returns their sum.\n\nExample: add(3, 5) should return 8.',
+    examples: [
+      { input: 'a=3, b=5', output: '8', explanation: '3 + 5 = 8' },
+      { input: 'a=10, b=-2', output: '8', explanation: '10 + (-2) = 8' },
+    ],
+    hints: ['Define a function using the `def` keyword', 'Use the + operator', 'Don\'t forget to return the result'],
+    solution: 'def add(a, b):\n    return a + b',
+    time_complexity: 'O(1)', space_complexity: 'O(1)',
+    companies: ['Google', 'Meta'],
+  },
+  {
+    id: 'python-003',
+    title: 'FizzBuzz',
+    topic: 'arrays',
+    difficulty: 'Easy',
+    description: 'Print numbers from 1 to 20. But for multiples of 3 print "Fizz", for multiples of 5 print "Buzz", and for multiples of both print "FizzBuzz".',
+    examples: [
+      { input: '', output: '1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz...', explanation: 'Loop 1-20 checking divisibility' },
+    ],
+    hints: ['Use a for loop: for i in range(1, 21)', 'Use the modulo operator % to check divisibility', 'Check for FizzBuzz (divisible by both) FIRST before Fizz or Buzz'],
+    solution: 'for i in range(1, 21):\n    if i % 15 == 0:\n        print("FizzBuzz")\n    elif i % 3 == 0:\n        print("Fizz")\n    elif i % 5 == 0:\n        print("Buzz")\n    else:\n        print(i)',
+    time_complexity: 'O(1)', space_complexity: 'O(1)',
+    companies: ['Amazon', 'Microsoft', 'Apple'],
+  },
+];
 
 const STARTER_CODE: Record<ProgrammingLanguage, string> = {
-  python: '# Write your first Python program!\nprint("Hello, World!")',
-  javascript: 'console.log("Hello, World!");',
-  java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}',
-  cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}',
+  python: '# Write your solution here\n',
+  javascript: '// Write your solution here\n',
+  java: '// Write your solution here\npublic class Main {\n    public static void main(String[] args) {\n        \n    }\n}',
+  cpp: '// Write your solution here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}',
 };
 
 const LANGUAGES: { value: ProgrammingLanguage; label: string }[] = [
@@ -157,14 +178,15 @@ export default function SessionPage() {
   const [feedback, setFeedback] = useState('');
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>('problem');
+  const [problemIndex, setProblemIndex] = useState(0);
+  const [agentProvider, setAgentProvider] = useState<string>('');
 
   useEffect(() => {
-    if (!currentProblem) {
-      setCurrentProblem(DEMO_PROBLEM);
-      setAgentReasoning('Arrays confidence is your lowest at 50%. Starting with Hello World to build your first Python foundation before advancing to algorithm problems.');
-      setDecisionType('next_problem');
-    }
-  }, []);
+    const p = DEMO_PROBLEMS[problemIndex];
+    setCurrentProblem(p);
+    setAgentReasoning(`Starting with "${p.title}" — this is Problem ${problemIndex + 1} of ${DEMO_PROBLEMS.length}. I'm watching your speed, hints, and attempts to build a model of your Python skills.`);
+    setDecisionType('next_problem');
+  }, [problemIndex]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
@@ -187,11 +209,60 @@ export default function SessionPage() {
     if (!timerStarted && newCode.trim() !== STARTER_CODE[language].trim()) startTimer();
   }, [timerStarted, startTimer, language]);
 
-  // Returns true if the problem id is NOT a valid UUID (i.e. it's a local demo problem)
-  const isDemoProblem = useCallback((id: string) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return !uuidRegex.test(id);
+  // Returns true if the problem id is a local demo problem (not a UUID)
+  const isLocalProblem = useCallback((id: string) => {
+    return id.startsWith('python-');
   }, []);
+
+  // Call the real AI agent and update state based on its decision
+  const callAgent = useCallback(async (isCorrect: boolean, submittedCode: string) => {
+    if (!currentProblem) return;
+    const store = useLearnerStore.getState();
+    setAgentLoading(true);
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemId: currentProblem.id,
+          problemTitle: currentProblem.title,
+          problemTopic: currentProblem.topic,
+          code: submittedCode,
+          correct: isCorrect,
+          timeTaken: store.timerSeconds,
+          hintsUsed: store.hintsUsed,
+          attemptCount: store.attemptsOnCurrentProblem,
+          confidence: store.confidence,
+          explanationMode: store.explanationMode,
+          problemIndex,
+        }),
+      });
+      const data = await res.json();
+      if (data.reasoning) setAgentReasoning(data.reasoning);
+      if (data.decisionType) setDecisionType(data.decisionType);
+      if (data.providerUsed) setAgentProvider(data.providerUsed);
+      if (data.confidenceUpdate) {
+        const { topic, delta } = data.confidenceUpdate;
+        const current = store.confidence[topic as keyof typeof store.confidence] ?? 0.5;
+        store.updateConfidence(topic as any, current + delta);
+      }
+      if (isCorrect && typeof data.nextProblemIndex === 'number' && data.nextProblemIndex > problemIndex) {
+        setTimeout(() => {
+          setProblemIndex(data.nextProblemIndex);
+          setResults([]);
+          setFeedback('');
+          setCorrect(null);
+          setCode(STARTER_CODE[language]);
+          resetTimer();
+          setAgentLoading(false);
+        }, 2200);
+        return;
+      }
+    } catch (e) {
+      console.error('Agent call failed:', e);
+    }
+    setAgentLoading(false);
+  }, [currentProblem, problemIndex, language, resetTimer, setAgentLoading, setAgentReasoning, setDecisionType]);
 
   const handleRun = useCallback(async () => {
     if (!currentProblem) return;
@@ -201,7 +272,7 @@ export default function SessionPage() {
     setResults([]);
 
     // For demo problems, do a quick local check instead of hitting Judge0
-    if (isDemoProblem(currentProblem.id)) {
+    if (isLocalProblem(currentProblem.id)) {
       await new Promise((r) => setTimeout(r, 600));
       const lowerCode = code.toLowerCase();
       const isCorrect =
@@ -253,7 +324,7 @@ export default function SessionPage() {
     }
 
     setOutputLoading(false);
-  }, [code, language, currentProblem, isDemoProblem]);
+  }, [code, language, currentProblem, isLocalProblem]);
 
   const handleSubmit = useCallback(async () => {
     if (!currentProblem) return;
@@ -265,7 +336,7 @@ export default function SessionPage() {
     store.incrementAttempts();
 
     // ── Demo / local problems: evaluate without hitting the database ──────────
-    if (isDemoProblem(currentProblem.id)) {
+    if (isLocalProblem(currentProblem.id)) {
       await new Promise((r) => setTimeout(r, 700));
 
       const lowerCode = code.toLowerCase();
@@ -289,7 +360,7 @@ export default function SessionPage() {
       setCorrect(isCorrect);
 
       if (isCorrect) {
-        setFeedback('Great job! Your solution passed all test cases. 🎉');
+        setFeedback('✓ Passed! The agent is analysing your performance…');
         store.incrementStreak();
         store.addSolvedProblem({
           problemId: currentProblem.id,
@@ -298,44 +369,8 @@ export default function SessionPage() {
           timeTaken: store.timerSeconds,
           timestamp: Date.now(),
         });
-
-        // Move to next demo problem after a short delay
-        setTimeout(() => {
-          setAgentLoading(true);
-          setTimeout(() => {
-            setCurrentProblem({
-              ...DEMO_PROBLEM,
-              id: 'demo-002',
-              title: 'Two Sum',
-              difficulty: 'Easy',
-              description:
-                'Given an array of integers nums and an integer target, return indices of the two numbers that add up to target. You may assume each input has exactly one solution.',
-              examples: [
-                { input: 'nums = [2,7,11,15], target = 9', output: '[0,1]', explanation: 'nums[0] + nums[1] = 9' },
-              ],
-              hints: [
-                'Try using a loop to check every pair of numbers.',
-                'Think about storing values you have seen before in a data structure.',
-                'Use a HashMap. For each num, check if (target - num) exists.',
-              ],
-              solution: `def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i`,
-            });
-            setAgentReasoning(
-              'Hello World complete! Arrays confidence is your next focus — "Two Sum" is the classic entry point for hash-map intuition.'
-            );
-            setDecisionType('next_problem');
-            setAgentLoading(false);
-            setFeedback('');
-            setCorrect(null);
-            setResults([]);
-            setCode(STARTER_CODE[language]);
-            resetTimer();
-          }, 2000);
-        }, 2000);
       } else {
-        setFeedback(
-          "Not quite — make sure you're printing output. Try print() in Python or console.log() in JavaScript."
-        );
+        setFeedback('Not quite. Review the hints and try again.');
         store.resetStreak();
         store.addSolvedProblem({
           problemId: currentProblem.id,
@@ -346,11 +381,14 @@ export default function SessionPage() {
         });
       }
 
+      // Call the real AI agent regardless of correctness
+      await callAgent(isCorrect, code);
+
       setOutputLoading(false);
       return;
     }
 
-    // ── Real problems (UUID ids): hit the /api/run backend ────────────────────
+    // ── Real problems: hit the /api/run backend ────────────────────
     try {
       const res = await fetch('/api/run', {
         method: 'POST',
@@ -393,7 +431,7 @@ export default function SessionPage() {
             setAgentLoading(true);
             setTimeout(() => {
               setCurrentProblem({
-                ...DEMO_PROBLEM,
+                ...DEMO_PROBLEMS[0],
                 id: 'arrays-002',
                 title: 'Best Time to Buy & Sell Stock',
                 difficulty: 'Easy',
@@ -427,7 +465,7 @@ export default function SessionPage() {
     }
 
     setOutputLoading(false);
-  }, [currentProblem, code, language, isDemoProblem, resetTimer, setAgentLoading, setAgentReasoning, setCurrentProblem, setDecisionType]);
+  }, [currentProblem, code, language, isLocalProblem, callAgent, resetTimer, setAgentLoading, setAgentReasoning, setCurrentProblem, setDecisionType]);
 
   const handleReset = useCallback(() => {
     setCode(STARTER_CODE[language]);
@@ -436,7 +474,7 @@ export default function SessionPage() {
     setCorrect(null);
   }, [language]);
 
-  const problem = currentProblem ?? DEMO_PROBLEM;
+  const problem = currentProblem ?? DEMO_PROBLEMS[0];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', background: 'var(--bg-void)' }}>
@@ -450,14 +488,20 @@ export default function SessionPage() {
         gap: 16,
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Cpu size={15} color="white" />
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, cursor: 'pointer' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Cpu size={15} color="white" />
+            </div>
+            <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: '#f8fafc' }}>
+              Lhama<span style={{ color: '#60a5fa' }}>Learns</span>
+            </span>
+            <span style={{ fontSize: 11, color: '#334155', fontWeight: 600, marginLeft: 4 }}>
+              {problemIndex + 1}/{DEMO_PROBLEMS.length}
+              {agentProvider && <span style={{ color: '#1e3a5f', marginLeft: 6 }}>· via {agentProvider}</span>}
+            </span>
           </div>
-          <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: '#f8fafc' }}>
-            Neural<span style={{ color: '#60a5fa' }}>DSA</span>
-          </span>
-        </div>
+        </Link>
 
         {/* Center: problem info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'center', overflow: 'hidden' }}>
@@ -515,7 +559,7 @@ export default function SessionPage() {
             padding: '8px 12px', borderBottom: '1px solid rgba(148,163,184,0.08)',
             background: 'rgba(6,14,30,0.5)', flexShrink: 0, gap: 8,
           }}>
-            <LanguageSelector value={language} onChange={handleLanguageChange} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>Python</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={handleReset} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.15)', background: 'transparent', color: '#94a3b8', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                 <RotateCcw size={12} /> Reset
@@ -527,11 +571,6 @@ export default function SessionPage() {
                 <Send size={12} /> Submit
               </button>
             </div>
-          </div>
-
-          {/* Timer */}
-          <div style={{ padding: '8px 12px', flexShrink: 0, borderBottom: '1px solid rgba(148,163,184,0.06)' }}>
-            <TimerBar seconds={timerSeconds} running={timerStarted} />
           </div>
 
           {/* Monaco */}
@@ -563,7 +602,7 @@ export default function SessionPage() {
           <div style={{
             flexShrink: 0, borderTop: '1px solid rgba(148,163,184,0.08)',
             padding: 12, display: 'flex', flexDirection: 'column', gap: 10,
-            maxHeight: 220, overflowY: 'auto', background: 'rgba(6,14,30,0.4)',
+            minHeight: 250, maxHeight: '50%', overflowY: 'auto', background: 'rgba(6,14,30,0.4)',
           }}>
             <OutputPanel results={results} loading={outputLoading} feedback={feedback} correct={correct} />
           </div>
