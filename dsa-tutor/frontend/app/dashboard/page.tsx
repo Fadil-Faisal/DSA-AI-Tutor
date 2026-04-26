@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Brain, BarChart3, Flame, Target, ArrowLeft, PlayCircle, Trophy, TrendingUp, Loader2 } from 'lucide-react';
+import { Brain, BarChart3, Flame, Target, ArrowLeft, PlayCircle, Trophy, TrendingUp, Loader2, Zap, AlertCircle } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { KnowledgeGraph } from '@/components/dashboard/KnowledgeGraph';
 import { StreakHeatmap } from '@/components/dashboard/StreakHeatmap';
@@ -28,21 +28,22 @@ function StatCard({ label, value, icon, color, sub }: StatCardProps) {
     <div style={{
       background: 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(10,22,40,0.95))',
       border: '1px solid rgba(148,163,184,0.1)',
-      borderRadius: 16, padding: 20,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+      borderRadius: 14, padding: '16px 18px',
+      minWidth: 120, flexShrink: 0,
+      boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           {label}
         </span>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ color }}>{icon}</span>
+        <div style={{ width: 28, height: 28, borderRadius: 7, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color, fontSize: 14 }}>{icon}</span>
         </div>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1, marginBottom: 4, fontFamily: 'Space Grotesk, sans-serif' }}>
+      <div style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1, fontFamily: 'Space Grotesk, sans-serif' }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -84,6 +85,12 @@ export default function DashboardPage() {
   const correctCount = solvedProblems.filter((p) => p.correct).length;
   const accuracy = totalProblemsAttempted > 0 ? Math.round((correctCount / totalProblemsAttempted) * 100) : 0;
   const avgConfidence = Math.round((Object.values(confidence).reduce((s, v) => s + v, 0) / 10) * 100);
+  
+  const avgTimePerProblem = solvedProblems.length > 0
+    ? Math.round(solvedProblems.reduce((s, p) => s + (p.timeTaken || 0), 0) / solvedProblems.length)
+    : 0;
+  const fastProblems = solvedProblems.filter((p) => p.correct && (p.timeTaken || 0) < 30).length;
+  const slowProblems = solvedProblems.filter((p) => (p.timeTaken || 0) > 90).length;
 
   const formatTime = (secs: number) => {
     if (secs < 60) return `${secs}s`;
@@ -104,13 +111,13 @@ export default function DashboardPage() {
           <Link href="/session" style={{ color: '#475569', display: 'flex', alignItems: 'center' }}>
             <ArrowLeft size={18} />
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Link href="/main-menu" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
             <Brain size={18} color="#60a5fa" />
             <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: '#f8fafc' }}>
               Lhama<span style={{ color: '#60a5fa' }}>Learns</span>
               <span style={{ fontWeight: 400, color: '#475569', marginLeft: 8 }}>Dashboard</span>
             </span>
-          </div>
+          </Link>
         </div>
         <Link href="/session" style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -125,12 +132,14 @@ export default function DashboardPage() {
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
 
         {/* Stat Cards */}
-        <motion.div {...fadeUp(0)} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 40 }}>
-          <StatCard label="Problems Solved" value={correctCount} icon={<Target size={16} />} color="#3b82f6" sub={`${totalProblemsAttempted} attempted`} />
+        <motion.div {...fadeUp(0)} style={{ display: 'flex', gap: 12, marginBottom: 32, overflowX: 'auto', paddingBottom: 4, justifyContent: 'center' }}>
+          <StatCard label="Problems" value={correctCount} icon={<Target size={16} />} color="#3b82f6" sub={`${totalProblemsAttempted} attempted`} />
           <StatCard label="Accuracy" value={`${accuracy}%`} icon={<Trophy size={16} />} color="#10b981" sub="all time" />
-          <StatCard label="Streak" value={currentStreak} icon={<Flame size={16} />} color="#f97316" sub="problems in a row" />
-          <StatCard label="Total Time" value={formatTime(totalTime)} icon={<TrendingUp size={16} />} color="#eab308" sub="all attempts" />
-          <StatCard label="Avg Confidence" value={`${avgConfidence}%`} icon={<BarChart3 size={16} />} color="#8b5cf6" sub="across 10 topics" />
+          <StatCard label="Streak" value={currentStreak} icon={<Flame size={16} />} color="#f97316" sub="in a row" />
+          <StatCard label="Avg Time" value={formatTime(avgTimePerProblem)} icon={<Zap size={16} />} color="#eab308" sub="per problem" />
+          <StatCard label="Fast" value={fastProblems} icon={<TrendingUp size={16} />} color="#10b981" sub="<30s" />
+          <StatCard label="Slow" value={slowProblems} icon={<AlertCircle size={16} />} color="#f97316" sub=">90s" />
+          <StatCard label="Confidence" value={`${avgConfidence}%`} icon={<BarChart3 size={16} />} color="#8b5cf6" sub="avg" />
         </motion.div>
 
         {loading && (

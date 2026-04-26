@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Send, RotateCcw, ChevronDown, Cpu, Flame } from 'lucide-react';
+import { Play, Send, RotateCcw, ChevronDown, Cpu, Flame, Users } from 'lucide-react';
 import { useLearnerStore } from '@/store/learnerStore';
 import { ProblemPanel } from '@/components/session/ProblemPanel';
 import { AgentPanel } from '@/components/session/AgentPanel';
@@ -169,6 +169,7 @@ export default function SessionPage() {
     timerSeconds, timerStarted,
     startTimer, tickTimer, resetTimer,
     currentStreak, setDecisionType,
+    hintsUsed, attemptsOnCurrentProblem,
   } = useLearnerStore();
 
   const [language, setLanguage] = useState<ProgrammingLanguage>('python');
@@ -488,7 +489,7 @@ export default function SessionPage() {
         gap: 16,
       }}>
         {/* Logo */}
-        <Link href="/" style={{ textDecoration: 'none' }}>
+        <Link href="/main-menu" style={{ textDecoration: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, cursor: 'pointer' }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Cpu size={15} color="white" />
@@ -504,16 +505,35 @@ export default function SessionPage() {
         </Link>
 
         {/* Center: problem info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, justifyContent: 'center', overflow: 'hidden' }}>
           <Badge variant={problem.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard'}>
             {problem.difficulty}
           </Badge>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {problem.title}
           </span>
-          <span style={{ fontSize: 11, color: '#475569', flexShrink: 0 }}>
-            DECISION: NEXT PROBLEM
-          </span>
+          
+          {/* Stats: Time | Hints | Attempts */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 10, color: '#64748b' }}>TIME</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: timerSeconds < 30 ? '#10b981' : timerSeconds < 60 ? '#f59e0b' : '#f43f5e' }}>
+                {timerSeconds}s
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 10, color: '#64748b' }}>HINTS</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: hintsUsed === 0 ? '#10b981' : hintsUsed <= 2 ? '#f59e0b' : '#f43f5e' }}>
+                {hintsUsed}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 10, color: '#64748b' }}>ATTEMPTS</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: attemptsOnCurrentProblem === 1 ? '#10b981' : attemptsOnCurrentProblem <= 3 ? '#f59e0b' : '#f43f5e' }}>
+                {attemptsOnCurrentProblem}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Right */}
@@ -523,6 +543,10 @@ export default function SessionPage() {
             <span style={{ fontSize: 12, fontWeight: 700, color: '#fb923c' }}>{currentStreak}</span>
           </div>
           <ExplanationToggle />
+          <a href="/multiplayer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#475569', textDecoration: 'none', padding: '4px 8px' }}>
+            <Users size={12} />
+            Multiplayer
+          </a>
           <a href="/dashboard" style={{ fontSize: 12, color: '#475569', textDecoration: 'none', padding: '4px 8px' }}>Dashboard</a>
         </div>
       </header>

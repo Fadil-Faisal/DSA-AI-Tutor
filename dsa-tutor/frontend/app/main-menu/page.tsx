@@ -415,8 +415,18 @@ export default function MainMenuPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { currentStreak, totalProblemsAttempted, confidence } = useLearnerStore();
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('onboarding_completed');
+    }
+    return false;
+  });
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('welcome_completed');
+    }
+    return false;
+  });
 
   const displayName = user
     ? (user.user_metadata?.full_name as string | undefined) || user.email?.split('@')[0] || 'Learner'
@@ -440,10 +450,20 @@ export default function MainMenuPage() {
       position: 'relative', overflowX: 'hidden',
     }}>
       {showOnboarding && !authLoading && user && (
-        <OnboardingQuiz onComplete={() => setShowOnboarding(false)} />
+        <OnboardingQuiz onComplete={(score) => {
+          setShowOnboarding(false);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('onboarding_completed', 'true');
+          }
+        }} />
       )}
       {showWelcome && !authLoading && user && !showOnboarding && (
-        <WelcomeDialog displayName={displayName} onComplete={() => setShowWelcome(false)} />
+        <WelcomeDialog displayName={displayName} onComplete={() => {
+          setShowWelcome(false);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('welcome_completed', 'true');
+          }
+        }} />
       )}
       <NeuralCanvas />
 
@@ -469,23 +489,23 @@ export default function MainMenuPage() {
         background: 'rgba(6,14,30,0.8)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid rgba(148,163,184,0.08)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 10,
-            background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 18px rgba(59,130,246,0.4)',
-          }}>
-            <Brain size={17} color="white" />
-          </div>
-          <span style={{
-            fontFamily: 'Space Grotesk, sans-serif',
-            fontWeight: 800, fontSize: 17, color: '#f8fafc',
-            letterSpacing: '-0.02em',
-          }}>
-            Lhama<span style={{ color: '#60a5fa' }}>Learner</span>
-          </span>
-        </div>
+<Link href="/roadmap" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 18px rgba(59,130,246,0.4)',
+            }}>
+              <Brain size={17} color="white" />
+            </div>
+            <span style={{
+              fontFamily: 'Space Grotesk, sans-serif',
+              fontWeight: 800, fontSize: 17, color: '#f8fafc',
+              letterSpacing: '-0.02em',
+            }}>
+              Lhama<span style={{ color: '#60a5fa' }}>Learner</span>
+            </span>
+          </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* streak pill */}

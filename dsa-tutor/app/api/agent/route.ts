@@ -10,7 +10,11 @@ import { getDueTopics } from '@/lib/agent/spaced';
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId, explanationMode, confidence, lastAttempt } = await req.json();
+    const { 
+      sessionId, explanationMode, confidence, lastAttempt,
+      problemId, problemTitle, problemTopic, code, correct,
+      timeTaken, hintsUsed, attemptCount, problemIndex
+    } = await req.json();
 
     if (!sessionId || !explanationMode || !confidence) {
       return NextResponse.json({ error: 'Missing required fields: sessionId, explanationMode, confidence' }, { status: 400 });
@@ -32,6 +36,14 @@ export async function POST(req: NextRequest) {
       .limit(20);
 
     const persona = getModePersona(explanationMode);
+    
+    const performanceMetrics = {
+      timeTaken: timeTaken ?? 0,
+      hintsUsed: hintsUsed ?? 0,
+      attemptCount: attemptCount ?? 0,
+      correct: correct ?? false,
+    };
+    
     const prompt = `
       ${persona}
 
@@ -42,13 +54,27 @@ export async function POST(req: NextRequest) {
 
       Weakest topic: ${weakestTopic}
       Topics due for review (not practiced in 48h): ${JSON.stringify(dueTopics)}
-      Last attempt: ${JSON.stringify(lastAttempt ?? null)}
+      
+      Last attempt metrics:
+      - Problem: ${problemTitle ?? 'N/A'}
+      - Topic: ${problemTopic ?? 'N/A'}
+      - Time taken: ${timeTaken ?? 0} seconds
+      - Hints used: ${hintsUsed ?? 0}
+      - Attempts: ${attemptCount ?? 0}
+      - Correct: ${correct ?? false}
+      
+      Performance analysis:
+      - Speed: ${timeTaken && timeTaken < 30 ? 'fast' : timeTaken && timeTaken < 60 ? 'moderate' : 'slow'}
+      - Accuracy: ${correct === true ? 'high' : 'low'}
+      - Hint reliance: ${hintsUsed === 0 ? 'independent' : hintsUsed <= 2 ? 'moderate' : 'high'}
+      
       Recent topics practiced: ${JSON.stringify(recentAttempts?.map((a: { topic: string }) => a.topic) ?? [])}
 
       Decision rules:
       - Prioritize topics with confidence below 0.4
       - If a topic is due for spaced repetition, include it
-      - Vary difficulty: Easy if confidence < 0.3, Medium if 0.3–0.7, Hard if > 0.7
+      - If time < 30s and correct, the student is proficient - move to harder problems
+      - If hints > 2 or time > 90s, the student is struggling - provide easier problems
       - Don't repeat the same topic 3 times in a row
 
       Respond ONLY with valid JSON in this exact shape:
