@@ -249,14 +249,17 @@ function OnboardingQuiz({ onComplete }: { onComplete: (score: number) => void })
   const q = ONBOARDING_QUIZ[step];
   const isLast = step === ONBOARDING_QUIZ.length - 1;
 
+  const displayScore = score;
+
   const handleAnswer = (idx: number) => {
     if (selected !== null) return;
     setSelected(idx);
-    if (idx === q.correct) setScore(s => s + 1);
+    const isCorrect = idx === q.correct;
     setTimeout(() => {
+      if (isCorrect) setScore(s => s + 1);
       setSelected(null);
       if (isLast) {
-        onComplete(score + (idx === q.correct ? 1 : 0));
+        onComplete(score + (isCorrect ? 1 : 0));
       } else {
         setStep(step + 1);
       }
@@ -314,7 +317,7 @@ function OnboardingQuiz({ onComplete }: { onComplete: (score: number) => void })
         </div>
 
         <div style={{ marginTop: 20, fontSize: 12, color: '#64748b', textAlign: 'center' }}>
-          Score: {score + (selected !== null && selected === q.correct ? 1 : 0)} / {ONBOARDING_QUIZ.length}
+          Score: {displayScore} / {ONBOARDING_QUIZ.length}
         </div>
       </motion.div>
     </div>
@@ -324,11 +327,11 @@ function OnboardingQuiz({ onComplete }: { onComplete: (score: number) => void })
 // ── Welcome Dialog ──────────────────────────────────────────────────────
 const WELCOME_MESSAGES = [
   { title: "Welcome to LhamaLearns!", text: "Your personal AI-powered DSA tutor. Let's start learning!" },
-  { title: "Your Learning Journey", text: "Follow the roadmap to master DSA. Complete topics to unlock new ones." },
+  { title: "Your Learning Journey", text: "We have curated a personal plan according to the test you just took to identify your weak and strong pursuit." },
   { title: "Practice Makes Perfect", text: "The more you practice, the smarter our AI gets at helping you." },
 ];
 
-function WelcomeDialog({ onComplete }: { onComplete: () => void }) {
+function WelcomeDialog({ displayName, onComplete }: { displayName: string; onComplete: () => void }) {
   const [step, setStep] = useState(0);
   const msg = WELCOME_MESSAGES[step];
   const isLast = step === WELCOME_MESSAGES.length - 1;
@@ -367,15 +370,15 @@ function WelcomeDialog({ onComplete }: { onComplete: () => void }) {
         </div>
 
         <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-          {step + 1} of {WELCOME_MESSAGES.length}
+          {`${step + 1} of 3`}
         </div>
 
         <h2 style={{ fontFamily: 'Space Grotesk', fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 12 }}>
-          {msg.title}
+          {step === 0 ? `Welcome, ${displayName}!` : msg.title}
         </h2>
 
         <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, marginBottom: 24 }}>
-          {msg.text}
+          {step === 0 ? "Your personal AI-powered DSA tutor. Let's start your learning journey!" : msg.text}
         </p>
 
         <div style={{ display: 'flex', gap: 12 }}>
@@ -436,8 +439,11 @@ export default function MainMenuPage() {
       background: 'linear-gradient(135deg, #030712 0%, #060e1e 50%, #030712 100%)',
       position: 'relative', overflowX: 'hidden',
     }}>
-      {showWelcome && !authLoading && user && (
-        <WelcomeDialog onComplete={() => setShowWelcome(false)} />
+      {showOnboarding && !authLoading && user && (
+        <OnboardingQuiz onComplete={() => setShowOnboarding(false)} />
+      )}
+      {showWelcome && !authLoading && user && !showOnboarding && (
+        <WelcomeDialog displayName={displayName} onComplete={() => setShowWelcome(false)} />
       )}
       <NeuralCanvas />
 
