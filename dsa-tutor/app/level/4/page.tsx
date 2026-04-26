@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Editor from '@monaco-editor/react';
+import { behaviorTracker } from '@/lib/agent/behaviorTracker';
 
 interface TestCase {
   nums: number[];
@@ -40,6 +41,8 @@ export default function CodingChallengePage() {
   const [hintAnswer, setHintAnswer] = useState('');
   const [hint3Unlocked, setHint3Unlocked] = useState(false);
   const [confetti, setConfetti] = useState<{ x: number; delay: number; color: string }[]>([]);
+  const [sessionId] = useState(() => 'session-' + Math.random().toString(36).slice(2, 12));
+  const [showSessionBanner, setShowSessionBanner] = useState(true);
   const startTimeRef = useRef(Date.now());
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -48,10 +51,18 @@ export default function CodingChallengePage() {
       setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
 
+    behaviorTracker.start(sessionId, 'two-sum-problem');
+    
+    // Log session ID for judge to copy
+    console.log('%c🎯 SESSION ID FOR JUDGE DASHBOARD:', 'color: #f59e0b; font-size: 14px; font-weight: bold');
+    console.log('%c' + sessionId, 'color: #fff; font-size: 16px; background: #27272a; padding: 8px 12px; border-radius: 4px')
+    console.log('%c📊 Go to http://localhost:3000/demo and enter this ID to watch live predictions!', 'color: #71717a; font-size: 12px')
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      behaviorTracker.stop();
     };
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     if (showCompletion) {
@@ -100,6 +111,9 @@ export default function CodingChallengePage() {
       });
     }
 
+    const passedCount = testResults.filter(r => r === 'pass').length;
+    const totalTests = testCases.length;
+    behaviorTracker.recordSubmit(passedCount, totalTests);
     setIsRunning(false);
   };
 
@@ -118,11 +132,14 @@ export default function CodingChallengePage() {
   const handleHint = (hintNum: number) => {
     if (hintNum === 1) {
       setHintsUsed((h) => h + 1);
+      behaviorTracker.recordHintRequest(1);
       alert('Hint 1: Try using a loop to check every pair of numbers');
     } else if (hintNum === 2) {
       setHintsUsed((h) => h + 1);
+      behaviorTracker.recordHintRequest(2);
       alert('Hint 2: Think about storing values you\'ve seen before in a data structure');
     } else if (hintNum === 3 && !hint3Unlocked) {
+      behaviorTracker.recordHintRequest(3);
       setShowHintAnswer(true);
     }
   };
@@ -269,13 +286,43 @@ export default function CodingChallengePage() {
           ← Back
         </button>
         <h1 className="text-xl font-bold text-amber-400">Level 4 — Coding Challenge</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-zinc-400 text-sm">XP</span>
-          <div className="w-20 h-2 bg-zinc-700 rounded-full overflow-hidden">
-            <div className="h-full bg-amber-500 w-0 rounded-full" />
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => { navigator.clipboard.writeText(sessionId); alert('Session ID copied!'); }}
+            className="text-xs bg-zinc-800 text-zinc-400 px-2 py-1 rounded border border-zinc-700 hover:text-amber-400"
+            title="Click to copy session ID for demo"
+          >
+            📋 ID: {sessionId.slice(0, 12)}...
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-400 text-sm">XP</span>
+            <div className="w-20 h-2 bg-zinc-700 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-500 w-0 rounded-full" />
+            </div>
           </div>
         </div>
       </header>
+
+      {showSessionBanner && (
+        <div className="relative z-10 flex justify-center py-2">
+          <div className="bg-amber-500/20 border border-amber-500/50 rounded-full px-4 py-1 flex items-center gap-3">
+            <span className="text-amber-400 text-sm">🎯 Monitoring Active</span>
+            <span className="text-zinc-400 text-xs">ID:</span>
+            <button
+              onClick={() => { navigator.clipboard.writeText(sessionId); alert('Session ID copied to clipboard!'); }}
+              className="text-white text-xs bg-zinc-700 px-2 py-0.5 rounded hover:bg-zinc-600"
+            >
+              {sessionId}
+            </button>
+            <button 
+              onClick={() => setShowSessionBanner(false)}
+              className="text-zinc-500 hover:text-white text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 text-center py-2">
         <span className="text-zinc-400 font-mono">{formatTime(elapsedTime)}</span>
@@ -373,7 +420,7 @@ Explanation: nums[0] + nums[1] = 9`}
               height="100%"
               language={language}
               value={code}
-              onChange={(value) => setCode(value || '')}
+              onChange={(value) => { setCode(value || ''); behaviorTracker.recordCodeEdit(); }}
               theme="vs-dark"
               options={{
                 minimap: { enabled: false },
