@@ -233,11 +233,187 @@ const FEATURES = [
   { icon: <Code2 size={14} />, label: 'Code execution', color: '#8b5cf6' },
 ];
 
+// ── Onboarding Quiz ──────────────────────────────────────────────────────
+const ONBOARDING_QUIZ = [
+  { q: "What is the time complexity of binary search?", opts: ["O(n)", "O(log n)", "O(n log n)", "O(1)"], correct: 1 },
+  { q: "Which data structure uses FIFO (First In First Out)?", opts: ["Stack", "Queue", "Tree", "Graph"], correct: 1 },
+  { q: "What is the worst-case time complexity of linear search?", opts: ["O(1)", "O(log n)", "O(n)", "O(n²)"], correct: 2 },
+  { q: "Which data structure uses LIFO (Last In First Out)?", opts: ["Queue", "Array", "Stack", "Linked List"], correct: 2 },
+  { q: "Which of the following is not a linear data structure?", opts: ["Array", "Linked List", "Stack", "Tree"], correct: 3 },
+];
+
+function OnboardingQuiz({ onComplete }: { onComplete: (score: number) => void }) {
+  const [step, setStep] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const q = ONBOARDING_QUIZ[step];
+  const isLast = step === ONBOARDING_QUIZ.length - 1;
+
+  const handleAnswer = (idx: number) => {
+    if (selected !== null) return;
+    setSelected(idx);
+    if (idx === q.correct) setScore(s => s + 1);
+    setTimeout(() => {
+      setSelected(null);
+      if (isLast) {
+        onComplete(score + (idx === q.correct ? 1 : 0));
+      } else {
+        setStep(step + 1);
+      }
+    }, 800);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'linear-gradient(135deg, #030712 0%, #060e1e 50%, #030712 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(10,22,40,0.98) 100%)',
+          border: '1px solid rgba(99,102,241,0.25)',
+          borderRadius: 24, padding: '32px 28px', maxWidth: 420, width: '90%',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <Brain size={20} color="#60a5fa" />
+          <span style={{ fontSize: 13, color: '#64748b' }}>Question {step + 1} of {ONBOARDING_QUIZ.length}</span>
+        </div>
+
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, color: '#f1f5f9' }}>{q.q}</h2>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {q.opts.map((opt, i) => {
+            const isSelected = selected === i;
+            const isCorrect = i === q.correct;
+            let bg = 'rgba(255,255,255,0.04)';
+            let border = 'rgba(148,163,184,0.15)';
+            if (selected !== null) {
+              if (isCorrect) { bg = 'rgba(16,185,129,0.15)'; border = 'rgba(16,185,129,0.4)'; }
+              else if (isSelected) { bg = 'rgba(244,63,94,0.15)'; border = 'rgba(244,63,94,0.4)'; }
+            }
+            return (
+              <motion.button
+                key={i}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleAnswer(i)}
+                disabled={selected !== null}
+                style={{
+                  padding: '14px 18px', borderRadius: 12, background: bg, border: `1px solid ${border}`,
+                  color: '#e2e8f0', fontSize: 14, textAlign: 'left',
+                  cursor: selected !== null ? 'default' : 'pointer', transition: 'all 0.15s',
+                }}
+              >
+                {opt}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 20, fontSize: 12, color: '#64748b', textAlign: 'center' }}>
+          Score: {score + (selected !== null && selected === q.correct ? 1 : 0)} / {ONBOARDING_QUIZ.length}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Welcome Dialog ──────────────────────────────────────────────────────
+const WELCOME_MESSAGES = [
+  { title: "Welcome to LhamaLearns!", text: "Your personal AI-powered DSA tutor. Let's start learning!" },
+  { title: "Your Learning Journey", text: "Follow the roadmap to master DSA. Complete topics to unlock new ones." },
+  { title: "Practice Makes Perfect", text: "The more you practice, the smarter our AI gets at helping you." },
+];
+
+function WelcomeDialog({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState(0);
+  const msg = WELCOME_MESSAGES[step];
+  const isLast = step === WELCOME_MESSAGES.length - 1;
+
+  const next = () => {
+    if (isLast) {
+      onComplete();
+    } else {
+      setStep(step + 1);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(3,7,18,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      backdropFilter: 'blur(8px)',
+    }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        style={{
+          background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(10,22,40,0.98) 100%)',
+          border: '1px solid rgba(99,102,241,0.25)',
+          borderRadius: 24, padding: '32px 28px', maxWidth: 380, width: '90%',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+        }}
+      >
+        <div style={{
+          width: 56, height: 56, borderRadius: 16,
+          background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 20, boxShadow: '0 0 24px rgba(59,130,246,0.4)',
+        }}>
+          <Sparkles size={24} color="white" />
+        </div>
+
+        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+          {step + 1} of {WELCOME_MESSAGES.length}
+        </div>
+
+        <h2 style={{ fontFamily: 'Space Grotesk', fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 12 }}>
+          {msg.title}
+        </h2>
+
+        <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, marginBottom: 24 }}>
+          {msg.text}
+        </p>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={onComplete}
+            style={{
+              flex: 1, padding: '12px 20px', borderRadius: 12,
+              background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)',
+              color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Skip
+          </button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={next}
+            style={{
+              flex: 1, padding: '12px 20px', borderRadius: 12,
+              background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+              border: 'none', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {isLast ? "Let's Go!" : "Next"}
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Main Menu Page ────────────────────────────────────────────────────────
 export default function MainMenuPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { currentStreak, totalProblemsAttempted, confidence } = useLearnerStore();
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const displayName = user
     ? (user.user_metadata?.full_name as string | undefined) || user.email?.split('@')[0] || 'Learner'
@@ -260,6 +436,9 @@ export default function MainMenuPage() {
       background: 'linear-gradient(135deg, #030712 0%, #060e1e 50%, #030712 100%)',
       position: 'relative', overflowX: 'hidden',
     }}>
+      {showWelcome && !authLoading && user && (
+        <WelcomeDialog onComplete={() => setShowWelcome(false)} />
+      )}
       <NeuralCanvas />
 
       {/* Ambient blobs */}
